@@ -1462,14 +1462,14 @@ async function addItem(){
     const cost=Number(document.getElementById("newCost").value);
     const price=Number(document.getElementById("newPrice").value);
     const stock=Number(document.getElementById("newStock").value);
-    const min=Number(document.getElementById("newMin").value);
+    const minimum=Number(document.getElementById("newMin").value);
     const target=Number(document.getElementById("newTarget").value);
 
     if(!name || !sku){ alert("Item name and SKU are required."); return; }
 
     const { data, error } = await _supabase
         .from('products')
-        .insert([{ name, sku, supplier, cost, price, stock, min, target }]);
+        .insert([{ name, sku, supplier, cost, price, stock, minimum, target }]);
 
     if (error) {
         console.error("Error saving to Supabase:", error);
