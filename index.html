@@ -1,0 +1,5183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Motor Shop Management System V4.2 • Live Scanner + Low Stock Notifications</title>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    background:#f4f6f8;
+    color:#222;
+    min-height:100vh;
+    padding-bottom:75px;
+}
+
+button,input,select{
+    font:inherit;
+}
+
+button{
+    cursor:pointer;
+}
+
+.hidden{
+    display:none!important;
+}
+
+/* ================= LOGIN ================= */
+
+#loginScreen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:#111827;
+}
+
+.login-box{
+    width:100%;
+    max-width:400px;
+    background:white;
+    border-radius:24px;
+    padding:25px;
+    box-shadow:0 15px 40px rgba(0,0,0,.25);
+}
+
+.logo{
+    width:70px;
+    height:70px;
+    margin:0 auto 15px;
+    border-radius:20px;
+    background:#111827;
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:36px;
+}
+
+.login-box h1{
+    text-align:center;
+    font-size:24px;
+}
+
+.login-subtitle{
+    text-align:center;
+    color:#6b7280;
+    font-size:13px;
+    margin:6px 0 22px;
+}
+
+.role-buttons{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:15px;
+}
+
+.role-btn{
+    padding:13px;
+    border:2px solid #e5e7eb;
+    background:white;
+    border-radius:12px;
+    font-weight:bold;
+}
+
+.role-btn.active{
+    background:#111827;
+    color:white;
+    border-color:#111827;
+}
+
+.form-group{
+    margin-bottom:13px;
+}
+
+.form-group label{
+    display:block;
+    font-size:12px;
+    font-weight:bold;
+    margin-bottom:6px;
+}
+
+.form-group input,
+.form-group select{
+    width:100%;
+    border:1px solid #d1d5db;
+    border-radius:11px;
+    padding:12px;
+    outline:none;
+    background:white;
+}
+
+.form-group input:focus,
+.form-group select:focus{
+    border-color:#111827;
+}
+
+.login-btn{
+    width:100%;
+    border:0;
+    background:#111827;
+    color:white;
+    padding:14px;
+    border-radius:12px;
+    font-weight:bold;
+    margin-top:5px;
+}
+
+.login-hint{
+    text-align:center;
+    color:#9ca3af;
+    font-size:11px;
+    margin-top:12px;
+}
+
+/* ================= APP ================= */
+
+#app{
+    display:none;
+}
+
+#app.show{
+    display:block;
+}
+
+/* ================= HEADER ================= */
+
+.header{
+    background:#111827;
+    color:white;
+    padding:17px 18px;
+    border-radius:0 0 22px 22px;
+}
+
+.header-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.account-info{
+    position:relative;
+}
+
+.account-label{
+    font-size:10px;
+    opacity:.6;
+}
+
+.account-name{
+    font-size:20px;
+    font-weight:bold;
+    margin-top:4px;
+    cursor:pointer;
+}
+
+.account-name::after{
+    content:" ▾";
+    font-size:13px;
+    opacity:.7;
+}
+
+.account-role{
+    font-size:11px;
+    opacity:.7;
+    margin-top:3px;
+}
+
+.profile-icon{
+    width:46px;
+    height:46px;
+    border-radius:50%;
+    background:#374151;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:23px;
+    cursor:pointer;
+}
+
+/* ================= PROFILE DROPDOWN ================= */
+
+.profile-menu{
+    display:none;
+    position:absolute;
+    top:63px;
+    left:0;
+    width:235px;
+    background:white;
+    color:#222;
+    border-radius:15px;
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+    overflow:hidden;
+    z-index:1000;
+}
+
+.profile-menu.show{
+    display:block;
+}
+
+.menu-header{
+    background:#f3f4f6;
+    padding:14px;
+}
+
+.menu-header strong{
+    display:block;
+}
+
+.menu-header small{
+    color:#6b7280;
+    font-size:11px;
+}
+
+.menu-item{
+    padding:13px 15px;
+    border-bottom:1px solid #eee;
+    font-size:13px;
+    cursor:pointer;
+}
+
+.menu-item:hover{
+    background:#f3f4f6;
+}
+
+.menu-item.logout{
+    color:#dc2626;
+    font-weight:bold;
+}
+
+/* ================= MAIN ================= */
+
+.container{
+    max-width:800px;
+    margin:auto;
+    padding:15px;
+}
+
+.date-box{
+    text-align:center;
+    margin:8px 0 17px;
+}
+
+.date-box strong{
+    font-size:18px;
+}
+
+.date-box small{
+    display:block;
+    color:#6b7280;
+    margin-top:4px;
+}
+
+/* ================= CARDS ================= */
+
+.sales-card{
+    background:white;
+    padding:21px;
+    border-radius:20px;
+    box-shadow:0 3px 12px rgba(0,0,0,.07);
+    margin-bottom:12px;
+}
+
+.sales-label{
+    color:#6b7280;
+    font-size:13px;
+}
+
+.sales-amount{
+    font-size:34px;
+    font-weight:bold;
+    margin-top:6px;
+}
+
+.sales-note{
+    color:#16a34a;
+    font-size:12px;
+    margin-top:6px;
+}
+
+.summary-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.summary-card{
+    background:white;
+    padding:15px;
+    border-radius:16px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+.summary-icon{
+    font-size:24px;
+}
+
+.summary-title{
+    color:#6b7280;
+    font-size:11px;
+    margin-top:7px;
+}
+
+.summary-value{
+    font-size:20px;
+    font-weight:bold;
+    margin-top:4px;
+}
+
+.section-title{
+    font-size:17px;
+    font-weight:bold;
+    margin:21px 0 9px;
+}
+
+/* ================= GENERIC ================= */
+
+.card{
+    background:white;
+    border-radius:16px;
+    padding:15px;
+    margin-bottom:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+.row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+}
+
+.muted{
+    color:#6b7280;
+    font-size:12px;
+}
+
+.small{
+    font-size:12px;
+}
+
+.bold{
+    font-weight:bold;
+}
+
+.amount{
+    font-weight:bold;
+}
+
+.btn{
+    border:0;
+    border-radius:10px;
+    padding:10px 13px;
+    font-weight:bold;
+}
+
+.btn-dark{
+    background:#111827;
+    color:white;
+}
+
+.btn-green{
+    background:#16a34a;
+    color:white;
+}
+
+.btn-red{
+    background:#dc2626;
+    color:white;
+}
+
+.btn-gray{
+    background:#e5e7eb;
+    color:#111;
+}
+
+.btn-blue{
+    background:#2563eb;
+    color:white;
+}
+
+.btn-orange{
+    background:#ea580c;
+    color:white;
+}
+
+/* ================= MY SALES ================= */
+
+.my-sales{
+    background:white;
+    border-radius:16px;
+    padding:17px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+.my-sales-value{
+    font-size:26px;
+    font-weight:bold;
+    margin-top:4px;
+}
+
+/* ================= TRANSACTIONS ================= */
+
+.transaction{
+    background:white;
+    padding:14px;
+    border-radius:14px;
+    margin-bottom:8px;
+    box-shadow:0 2px 7px rgba(0,0,0,.04);
+}
+
+.status{
+    display:inline-block;
+    padding:4px 7px;
+    border-radius:6px;
+    font-size:9px;
+    font-weight:bold;
+    background:#dcfce7;
+    color:#15803d;
+    margin-top:6px;
+}
+
+/* ================= ALERT ================= */
+
+.alert{
+    background:white;
+    border-left:5px solid #ef4444;
+    border-radius:12px;
+    padding:13px;
+    margin-bottom:8px;
+}
+
+.alert strong{
+    display:block;
+}
+
+.alert small{
+    color:#6b7280;
+}
+
+/* ================= QUICK ================= */
+
+.quick-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:9px;
+}
+
+.quick{
+    background:white;
+    border-radius:14px;
+    padding:14px 6px;
+    text-align:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+    cursor:pointer;
+}
+
+.quick-icon{
+    font-size:24px;
+}
+
+.quick span{
+    display:block;
+    font-size:10px;
+    font-weight:bold;
+    margin-top:6px;
+}
+
+/* ================= FORMS ================= */
+
+.form-card{
+    background:white;
+    padding:16px;
+    border-radius:17px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+.input-group{
+    margin-bottom:12px;
+}
+
+.input-group label{
+    display:block;
+    font-size:11px;
+    font-weight:bold;
+    margin-bottom:5px;
+}
+
+.input-group input,
+.input-group select{
+    width:100%;
+    padding:11px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    background:white;
+}
+
+.two-col{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+/* ================= AUTOCOMPLETE ================= */
+
+.autocomplete{
+    position:relative;
+}
+
+.suggestions{
+    position:absolute;
+    left:0;
+    right:0;
+    top:100%;
+    background:white;
+    border:1px solid #ddd;
+    border-radius:10px;
+    overflow:hidden;
+    z-index:100;
+    box-shadow:0 6px 15px rgba(0,0,0,.12);
+}
+
+.suggestion{
+    padding:11px;
+    border-bottom:1px solid #eee;
+    cursor:pointer;
+}
+
+.suggestion:hover{
+    background:#f3f4f6;
+}
+
+.suggestion strong{
+    display:block;
+    font-size:13px;
+}
+
+.suggestion small{
+    color:#6b7280;
+}
+
+/* ================= TABLE ================= */
+
+.table-wrap{
+    overflow-x:auto;
+    background:white;
+    border-radius:15px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:650px;
+}
+
+th,td{
+    padding:10px;
+    border-bottom:1px solid #eee;
+    text-align:left;
+    font-size:11px;
+}
+
+th{
+    background:#f3f4f6;
+}
+
+/* ================= CART ================= */
+
+.cart-item{
+    background:#f9fafb;
+    border-radius:10px;
+    padding:11px;
+    margin-bottom:7px;
+}
+
+.qty-controls{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    margin-top:8px;
+}
+
+.qty-btn{
+    width:28px;
+    height:28px;
+    border:0;
+    border-radius:7px;
+    background:#e5e7eb;
+}
+
+/* ================= MODAL ================= */
+
+.modal-bg{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    z-index:2000;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+}
+
+.modal-bg.show{
+    display:flex;
+}
+
+.modal{
+    background:white;
+    width:100%;
+    max-width:430px;
+    max-height:90vh;
+    overflow:auto;
+    border-radius:20px;
+    padding:20px;
+}
+
+.modal h3{
+    margin-bottom:15px;
+}
+
+.modal-actions{
+    display:flex;
+    gap:8px;
+    margin-top:15px;
+}
+
+.modal-actions button{
+    flex:1;
+}
+
+.profile-picture{
+    width:90px;
+    height:90px;
+    border-radius:50%;
+    background:#e5e7eb;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:42px;
+    margin:0 auto 15px;
+}
+
+.info-box{
+    background:#f3f4f6;
+    border-radius:11px;
+    padding:11px;
+    margin-bottom:8px;
+}
+
+.info-box small{
+    display:block;
+    color:#6b7280;
+    font-size:10px;
+}
+
+.info-box strong{
+    display:block;
+    margin-top:3px;
+}
+
+/* ================= BOTTOM NAV ================= */
+
+.bottom-nav{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    height:65px;
+    background:white;
+    border-top:1px solid #ddd;
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    z-index:500;
+}
+
+.nav{
+    text-align:center;
+    color:#6b7280;
+    font-size:9px;
+    cursor:pointer;
+}
+
+.nav.active{
+    color:#111827;
+    font-weight:bold;
+}
+
+.nav-icon{
+    display:block;
+    font-size:20px;
+    margin-bottom:3px;
+}
+
+/* ================= PRINT ================= */
+
+#printArea{
+    display:none;
+}
+
+@media print{
+
+    body *{
+        visibility:hidden;
+    }
+
+    #printArea,
+    #printArea *{
+        visibility:visible;
+    }
+
+    #printArea{
+        display:block;
+        position:absolute;
+        left:0;
+        top:0;
+        width:100%;
+    }
+
+}
+
+/* ================= MOBILE ================= */
+
+@media(max-width:420px){
+
+    .sales-amount{
+        font-size:29px;
+    }
+
+    .summary-value{
+        font-size:18px;
+    }
+
+    .quick-grid{
+        grid-template-columns:repeat(3,1fr);
+    }
+
+}
+
+
+/* ================= LOW STOCK NOTIFICATION ================= */
+.stock-notification{position:fixed;right:16px;top:16px;z-index:99999;background:#111827;color:#fff;padding:14px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:340px;display:none}
+.stock-notification.show{display:block;animation:stockPop .25s ease}
+.stock-notification strong{display:block;margin-bottom:5px}
+.stock-notification button{margin-top:10px;border:0;border-radius:9px;padding:8px 11px;background:#fff;color:#111827;font-weight:bold}
+@keyframes stockPop{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
+.stock-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc2626;color:#fff;font-size:11px;font-weight:bold;margin-left:5px}
+
+</style>
+</head>
+
+
+<body>
+
+<div id="stockNotification" class="stock-notification">
+  <strong>⚠️ Low Stock Alert</strong>
+  <span id="stockNotificationText"></span>
+  <br><button onclick="showSection('restock'); hideStockNotification();">View Restock</button>
+</div>
+
+
+<!-- =====================================================
+     LOGIN
+===================================================== -->
+
+<div id="loginScreen">
+
+    <div class="login-box">
+
+        <div class="logo">
+            🏍️
+        </div>
+
+        <h1>Motor Shop</h1>
+
+        <div class="login-subtitle">
+            Management System V4.2 • Live Scanner + Low Stock Notifications
+        </div>
+
+
+        <div class="role-buttons">
+
+            <button
+                class="role-btn active"
+                id="ownerRoleBtn"
+                onclick="selectLoginRole('owner')">
+
+                👑 Owner
+
+            </button>
+
+
+            <button
+                class="role-btn"
+                id="employeeRoleBtn"
+                onclick="selectLoginRole('employee')">
+
+                👨‍🔧 Employee
+
+            </button>
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>Name / Username</label>
+
+            <input
+                id="loginName"
+                type="text"
+                placeholder="Enter name or username">
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>Branch</label>
+
+            <select id="loginBranch">
+
+                <option>Main Branch</option>
+                <option>Branch 2</option>
+
+            </select>
+
+        </div>
+
+
+        <div class="form-group">
+
+            <label>Password / PIN</label>
+
+            <input
+                id="loginPassword"
+                type="password"
+                placeholder="Enter password or PIN">
+
+        </div>
+
+
+        <button
+            class="login-btn"
+            onclick="login()">
+
+            LOGIN
+
+        </button>
+
+
+        <div class="login-hint">
+            Offline-First Supabase System • Owner PIN: 1234
+            <br><span id="dbStatusText">Checking connection…</span>
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- =====================================================
+     APP
+===================================================== -->
+
+<div id="app">
+
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <div class="header-top">
+
+            <div class="account-info">
+
+                <div class="account-label"
+                     id="accountLabel">
+
+                    OWNER DASHBOARD
+
+                </div>
+
+
+                <div class="account-name"
+                     id="accountName"
+                     onclick="toggleProfileMenu()">
+
+                    Owner
+
+                </div>
+
+
+                <div class="account-role"
+                     id="accountRole">
+
+                    Owner • Main Branch
+
+                </div>
+
+
+                <!-- PROFILE MENU -->
+
+                <div class="profile-menu"
+                     id="profileMenu">
+
+                </div>
+
+            </div>
+
+
+            <div class="profile-icon"
+                 id="profileIcon"
+                 onclick="toggleProfileMenu()">
+
+                👑
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- CONTENT -->
+
+    <div class="container"
+         id="mainContent">
+
+    </div>
+
+
+
+    <!-- BOTTOM NAV -->
+
+    <div class="bottom-nav"
+         id="bottomNav">
+
+    </div>
+
+
+</div>
+
+
+
+<!-- =====================================================
+     MODAL
+===================================================== -->
+
+<div class="modal-bg"
+     id="modalBg">
+
+    <div class="modal">
+
+        <h3 id="modalTitle">
+            Modal
+        </h3>
+
+        <div id="modalContent"></div>
+
+        <div class="modal-actions" id="modalActionsContainer">
+
+            <button
+                class="btn btn-gray"
+                onclick="closeModal()">
+
+                Close
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- PRINT AREA -->
+
+<div id="printArea"></div>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+
+/* =====================================================
+   SUPABASE & OFFLINE STORAGE LAYER
+===================================================== */
+
+const SUPABASE_URL = "https://efwzdzffdzklxrrssucz.supabase.co";
+const SUPABASE_KEY = "sb_publishable_VgCDEcuwsgDXdTvFW2IJaw_RTMbY0ax";
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let databaseReady = false;
+let dbSyncBusy = false;
+let uploadedImageBase64 = "";
+
+function previewImage(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = document.getElementById("imagePreview");
+            img.src = e.target.result;
+            img.style.display = "block";
+            uploadedImageBase64 = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function normalizeProduct(row){ 
+    return {
+        id: row.id,
+        name: row.name || "",
+        sku: row.sku || "",
+        supplier: row.supplier || "",
+        category: row.category || "",
+        sizes: row.size || row.sizes || "",
+        model: row.model || "",
+        color: row.color || "",
+        cost: Number(row.cost || 0),
+        price: Number(row.price || 0),
+        stock: Number(row.stock || 0),
+        min: Number(row.minimum ?? row.min ?? 0),
+        target: Number(row.target || 0),
+        image: row.image || ""
+    }; 
+}
+function normalizeTransaction(row){ let items=row.items; if(typeof items==="string"){try{items=JSON.parse(items)}catch{items=[]}} return {id:row.id,date:row.date||row.created_at||new Date().toISOString(),branch:row.branch||"",employee:row.employee||"",employeeId:row.employee_id ?? row.employeeId ?? "",items:Array.isArray(items)?items:[],total:Number(row.total||0),profit:Number(row.profit||0)}; }
+function normalizeEmployee(row){ return {id:row.id,name:row.name||"",employeeId:row.employee_id ?? row.employeeId ?? "",branch:row.branch||"Main Branch",position:row.position||"Employee",status:row.status||"Active",password:row.password||""}; }
+function normalizeSupplier(row){ return {id:row.id,name:row.name||"",contact:row.contact||""}; }
+function normalizeCash(row){ return {id:row.id,date:row.date||row.created_at||new Date().toISOString(),branch:row.branch||"",amount:Number(row.amount||0),collectedBy:row.collected_by ?? row.collectedBy ?? "",purpose:row.purpose||""}; }
+function normalizeAudit(row){ let items=row.products ?? row.items ?? []; if(typeof items==="string"){try{items=JSON.parse(items)}catch{items=[]}} return {id:row.id,date:row.date||row.created_at||new Date().toISOString(),branch:row.branch||"",employee:row.employee||"",employeeId:row.employee_id ?? row.employeeId ?? "",products:Array.isArray(items)?items:[]}; }
+
+// LocalStorage Persistence Helpers
+function saveLocalData(){
+    try {
+        localStorage.setItem("motorShop_products", JSON.stringify(products));
+        localStorage.setItem("motorShop_transactions", JSON.stringify(transactions));
+        localStorage.setItem("motorShop_employees", JSON.stringify(employees));
+        localStorage.setItem("motorShop_suppliers", JSON.stringify(suppliers));
+        localStorage.setItem("motorShop_cashCollections", JSON.stringify(cashCollections));
+        localStorage.setItem("motorShop_audits", JSON.stringify(audits));
+    } catch(e) { console.error("Local save error:", e); }
+}
+
+function loadLocalData(){
+    try {
+        const p = localStorage.getItem("motorShop_products");
+        if(p) products = JSON.parse(p);
+        const t = localStorage.getItem("motorShop_transactions");
+        if(t) transactions = JSON.parse(t);
+        const e = localStorage.getItem("motorShop_employees");
+        if(e) employees = JSON.parse(e);
+        const s = localStorage.getItem("motorShop_suppliers");
+        if(s) suppliers = JSON.parse(s);
+        const c = localStorage.getItem("motorShop_cashCollections");
+        if(c) cashCollections = JSON.parse(c);
+        const a = localStorage.getItem("motorShop_audits");
+        if(a) audits = JSON.parse(a);
+    } catch(e) { console.error("Local load error:", e); }
+}
+
+// Queue for offline actions waiting to sync
+function getOfflineQueue(){
+    try {
+        return JSON.parse(localStorage.getItem("motorShop_offlineQueue") || "[]");
+    } catch{ return []; }
+}
+function saveOfflineQueue(q){
+    localStorage.setItem("motorShop_offlineQueue", JSON.stringify(q));
+}
+
+async function processOfflineQueue(){
+    if(!navigator.onLine || !databaseReady) return;
+    const queue = getOfflineQueue();
+    if(!queue.length) return;
+
+    let remaining = [];
+    for(let action of queue){
+        try {
+            if(action.type === "insert_product"){
+                await _supabase.from("products").insert(action.data);
+            } else if(action.type === "insert_transaction"){
+                await _supabase.from("transactions").insert(action.data);
+            } else if(action.type === "insert_cash"){
+                await _supabase.from("cash_collections").insert(action.data);
+            }
+        } catch(err){
+            console.warn("Queue sync failed for action:", action, err);
+            remaining.push(action);
+        }
+    }
+    saveOfflineQueue(remaining);
+}
+
+async function syncAllFromSupabase(initial=false){
+    if(dbSyncBusy) return; 
+    if(!navigator.onLine){
+        databaseReady = false;
+        loadLocalData();
+        return;
+    }
+    dbSyncBusy=true;
+    try{
+        await processOfflineQueue();
+        const [p,t,e,sup,c,a,catData,szData,mdData,colData]=await Promise.all([
+            _supabase.from("products").select("*").order("id"),
+            _supabase.from("transactions").select("*").order("date",{ascending:false}),
+            _supabase.from("employees").select("*").order("id"),
+            _supabase.from("suppliers").select("*").order("id"),
+            _supabase.from("cash_collections").select("*").order("date",{ascending:false}),
+            _supabase.from("inventory_audits").select("*").order("date",{ascending:false}),
+            _supabase.from("shop_categories").select("*").order("id"),
+            _supabase.from("shop_sizes").select("*").order("id"),
+            _supabase.from("shop_models").select("*").order("id"),
+            _supabase.from("shop_colors").select("*").order("id")
+        ]);
+        const errors=[p,t,e,sup,c,a].filter(x=>x.error);
+        if(errors.length) throw new Error(errors.map(x=>x.error.message).join(" | "));
+        if(p.data) products=p.data.length?p.data.map(normalizeProduct):products;
+        if(t.data) transactions=t.data.map(normalizeTransaction);
+        if(e.data) employees=e.data.length?e.data.map(normalizeEmployee):employees;
+        if(sup.data) suppliers=sup.data.length?sup.data.map(normalizeSupplier):suppliers;
+        if(c.data) cashCollections=c.data.map(normalizeCash);
+        if(a.data) audits=a.data.map(normalizeAudit);
+        if(catData.data && catData.data.length) shopCategories = catData.data.map(x => x.name);
+        if(szData.data && szData.data.length) {
+            shopSizes = {};
+            szData.data.forEach(row => {
+                if(!shopSizes[row.category]) shopSizes[row.category] = [];
+                shopSizes[row.category].push(row.size_name);
+            });
+        }
+        if(mdData.data && mdData.data.length) shopModels = mdData.data.map(x => x.name);
+        if(colData.data && colData.data.length) shopColors = colData.data.map(x => x.name);
+        
+        databaseReady = true;
+        saveLocalData();
+        return true;
+    }finally{ dbSyncBusy=false; }
+}
+
+const dbReady=(async()=>{
+    loadLocalData();
+    try{ await syncAllFromSupabase(true); databaseReady=true; startDatabaseSync(); checkExistingSession(); }
+    catch(err){ console.warn("Supabase offline mode:",err); databaseReady=false; }
+})();
+
+function startDatabaseSync(){
+    setInterval(()=>{ if(navigator.onLine) syncAllFromSupabase(false).catch(console.warn); },5000);
+    window.addEventListener("online", ()=>{
+        databaseReady = true;
+        syncAllFromSupabase(false).catch(console.warn);
+        const el = document.getElementById("dbStatusText");
+        if(el) el.textContent = dbStatus();
+    });
+    window.addEventListener("offline", ()=>{
+        databaseReady = false;
+        const el = document.getElementById("dbStatusText");
+        if(el) el.textContent = dbStatus();
+    });
+}
+
+function dbStatus(){ 
+    if(!navigator.onLine) return "🟡 Offline Mode (Saved locally, auto-syncs when online)";
+    return databaseReady ? "🟢 Online database connected" : "🟠 Database connection unavailable"; 
+}
+
+/* =====================================================
+   DATA & DYNAMIC SETTINGS ARRAYS
+===================================================== */
+
+const OWNER_PIN = "1234";
+
+let currentUser = null;
+
+let loginRole = "owner";
+
+let shopCategories = ["Oils", "Filters", "Brakes", "Tires", "Spark Plugs", "Others"];
+
+let shopSizes = {
+    "Oils": ["1 L", "0.8 L", "4 L"],
+    "Tires": ["70/90-14", "80/90-14", "90/90-14"],
+    "Brakes": ["Standard", "Heavy Duty"],
+    "Spark Plugs": ["Standard"],
+    "Filters": ["Standard"],
+    "Others": ["Standard"]
+};
+
+let shopModels = ["Yamaha", "Honda", "Suzuki", "Kawasaki", "Universal"];
+
+let shopColors = ["Black", "Red", "Blue", "Silver", "Gold", "White"];
+
+
+let products = [
+
+    {
+        id:1,
+        name:"Engine Oil 10W-40",
+        sku:"480001",
+        supplier:"Sample Parts Supplier",
+        category:"Oils",
+        sizes:"1 L",
+        model:"Yamaha",
+        color:"Black",
+        cost:180,
+        price:250,
+        stock:8,
+        min:5,
+        target:20
+    }
+
+];
+
+
+let suppliers = [
+
+    {
+        id:1,
+        name:"Sample Parts Supplier",
+        contact:"09123456789"
+    },
+
+    {
+        id:2,
+        name:"Sample Motorcycle Supplier",
+        contact:"09987654321"
+    }
+
+];
+
+
+let employees = [
+
+    {
+        id:1,
+        name:"Juan Dela Cruz",
+        employeeId:"EMP-001",
+        branch:"Main Branch",
+        position:"Mechanic",
+        status:"Active",
+        password:"1234"
+    },
+
+    {
+        id:2,
+        name:"Pedro Santos",
+        employeeId:"EMP-002",
+        branch:"Main Branch",
+        position:"Cashier",
+        status:"Active",
+        password:"1234"
+    }
+
+];
+
+
+let transactions = [];
+let cashCollections = [];
+let audits = [];
+let card = [];
+let activeCameraStream = null;
+let isScanningLive = false;
+
+
+/* =====================================================
+   HELPERS
+===================================================== */
+
+function money(value){
+
+    return "₱" + Number(value || 0)
+        .toLocaleString("en-PH",{
+            minimumFractionDigits:2,
+            maximumFractionDigits:2
+        });
+
+}
+
+
+function todayString(){
+
+    return new Date().toLocaleDateString("en-US",{
+        weekday:"long",
+        year:"numeric",
+        month:"long",
+        day:"numeric"
+    });
+
+}
+
+
+function isToday(date){
+
+    const d = new Date(date);
+    const n = new Date();
+
+    return d.getDate()===n.getDate()
+        && d.getMonth()===n.getMonth()
+        && d.getFullYear()===n.getFullYear();
+
+}
+
+
+function todayTransactions(){
+
+    return transactions.filter(t=>isToday(t.date));
+
+}
+
+
+function totalTodaySales(){
+
+    return todayTransactions()
+        .reduce((sum,t)=>sum+Number(t.total),0);
+
+}
+
+
+function totalTodayProfit(){
+
+    return todayTransactions()
+        .reduce((sum,t)=>sum+Number(t.profit),0);
+
+}
+
+
+function totalTodayTransactions(){
+
+    return todayTransactions().length;
+
+}
+
+
+function totalTodayCollected(){
+
+    return cashCollections
+        .filter(c=>isToday(c.date))
+        .reduce((sum,c)=>sum+Number(c.amount),0);
+
+}
+
+
+function lowStockProducts(){
+
+    return products.filter(p=>p.stock<=p.min);
+
+}
+
+
+function employeeSales(employeeId){
+
+    return todayTransactions()
+        .filter(t=>t.employeeId===employeeId)
+        .reduce((sum,t)=>sum+Number(t.total),0);
+
+}
+
+
+function employeeTransactionCount(employeeId){
+
+    return todayTransactions()
+        .filter(t=>t.employeeId===employeeId)
+        .length;
+
+}
+
+
+function branchSales(branch){
+
+    return todayTransactions()
+        .filter(t=>t.branch===branch)
+        .reduce((sum,t)=>sum+Number(t.total),0);
+
+}
+
+
+function branchTransactionCount(branch){
+
+    return todayTransactions()
+        .filter(t=>t.branch===branch)
+        .length;
+
+}
+
+
+/* =====================================================
+   LOGIN & SESSION PERSISTENCE
+===================================================== */
+
+function selectLoginRole(role){
+
+    loginRole=role;
+
+    document
+        .getElementById("ownerRoleBtn")
+        .classList.toggle("active",role==="owner");
+
+    document
+        .getElementById("employeeRoleBtn")
+        .classList.toggle("active",role==="employee");
+
+}
+
+
+async function login(){
+    const name=document.getElementById("loginName").value.trim();
+    const branch=document.getElementById("loginBranch").value;
+    const password=document.getElementById("loginPassword").value;
+    if(!name || !password){alert("Please enter your login information.");return;}
+    if(loginRole==="owner"){
+        if(password!==OWNER_PIN){alert("Incorrect Owner PIN.");return;}
+        currentUser={role:"owner",name:name||"Owner",id:"OWNER-001",branch,position:"Owner"};
+    }else{
+        const employee=employees.find(e=>((e.employeeId||"").toLowerCase()===name.toLowerCase()||(e.name||"").toLowerCase()===name.toLowerCase())&&e.branch===branch&&e.password===password&&e.status==="Active");
+        if(!employee){alert("Employee login failed.\n\nCheck Employee ID, branch and password.");return;}
+        currentUser={role:"employee",name:employee.name,id:employee.employeeId,branch:employee.branch,position:employee.position};
+    }
+    
+    sessionStorage.setItem("motorShopUser", JSON.stringify(currentUser));
+
+    document.getElementById("loginScreen").style.display="none";
+    document.getElementById("app").classList.add("show");
+    setupHeader(); renderDashboard();
+}
+
+function checkExistingSession(){
+    const savedUser = sessionStorage.getItem("motorShopUser");
+    if(savedUser){
+        try{
+            currentUser = JSON.parse(savedUser);
+            if(currentUser){
+                document.getElementById("loginScreen").style.display="none";
+                document.getElementById("app").classList.add("show");
+                setupHeader(); renderDashboard();
+            }
+        }catch(e){
+            console.error("Session load error:", e);
+        }
+    }
+}
+
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+function setupHeader(){
+
+    document.getElementById("accountName")
+        .textContent=currentUser.name;
+
+    document.getElementById("accountRole")
+        .textContent=
+        currentUser.position +
+        " • " +
+        currentUser.branch;
+
+
+    if(currentUser.role==="owner"){
+
+        document.getElementById("accountLabel")
+            .textContent="OWNER DASHBOARD";
+
+        document.getElementById("profileIcon")
+            .textContent="👑";
+
+        setupOwnerMenu();
+
+    }
+
+    else{
+
+        document.getElementById("accountLabel")
+            .textContent="EMPLOYEE DASHBOARD";
+
+        document.getElementById("profileIcon")
+            .textContent="👨‍🔧";
+
+        setupEmployeeMenu();
+
+    }
+
+}
+
+
+function setupOwnerMenu(){
+
+    document.getElementById("profileMenu").innerHTML=`
+
+        <div class="menu-header">
+
+            <strong>${currentUser.name}</strong>
+
+            <small>
+                Owner Account
+            </small>
+
+        </div>
+
+        <div class="menu-item"
+             onclick="openOwnerProfile()">
+
+            👤 My Profile
+
+        </div>
+
+        <div class="menu-item"
+             onclick="openSettings()">
+
+            ⚙️ Settings & Management
+
+        </div>
+
+        <div class="menu-item"
+             onclick="showSection('employees')">
+
+            👥 Employee Management
+
+        </div>
+
+        <div class="menu-item"
+             onclick="openBranches()">
+
+            🏪 Branch Management
+
+        </div>
+
+        <div class="menu-item"
+             onclick="changePassword()">
+
+            🔐 Change Password
+
+        </div>
+
+        <div class="menu-item logout"
+             onclick="logout()">
+
+            🚪 Log Out
+
+        </div>
+
+    `;
+
+}
+
+
+function setupEmployeeMenu(){
+
+    document.getElementById("profileMenu").innerHTML=`
+
+        <div class="menu-header">
+
+            <strong>${currentUser.name}</strong>
+
+            <small>
+                ${currentUser.id}
+            </small>
+
+        </div>
+
+        <div class="menu-item"
+             onclick="openEmployeeProfile()">
+
+            👤 My Profile
+
+        </div>
+
+        <div class="menu-item"
+             onclick="changePassword()">
+
+            🔐 Change Password
+
+        </div>
+
+        <div class="menu-item logout"
+             onclick="logout()">
+
+            🚪 Log Out
+
+        </div>
+
+    `;
+
+}
+
+
+function toggleProfileMenu(){
+
+    if(!currentUser) return;
+
+    document
+        .getElementById("profileMenu")
+        .classList.toggle("show");
+
+}
+
+
+document.addEventListener("click",function(e){
+
+    const menu=document.getElementById("profileMenu");
+
+    const account=document.querySelector(".account-info");
+
+    const icon=document.getElementById("profileIcon");
+
+    if(
+        !account.contains(e.target)
+        &&
+        !icon.contains(e.target)
+    ){
+
+        menu.classList.remove("show");
+
+    }
+
+});
+
+
+/* =====================================================
+   NAVIGATION
+===================================================== */
+
+function setBottomNav(items){
+
+    document.getElementById("bottomNav").innerHTML=
+        items.map((item,index)=>`
+
+            <div class="nav ${index===0?'active':''}"
+                 onclick="${item.action}">
+
+                <span class="nav-icon">
+                    ${item.icon}
+                </span>
+
+                ${item.name}
+
+            </div>
+
+        `).join("");
+
+}
+
+
+function showSection(section){
+
+    if(!currentUser) return;
+    stopLiveCameraScanner();
+
+    document
+        .getElementById("profileMenu")
+        .classList.remove("show");
+
+
+    if(currentUser.role==="owner"){
+
+        if(section==="dashboard") renderDashboard();
+        if(section==="inventory") renderInventory();
+        if(section==="addItem") renderAddItem();
+        if(section==="restock") renderRestock();
+        if(section==="sales") renderSales();
+        if(section==="cash") renderCash();
+        if(section==="employees") renderEmployees();
+        if(section==="suppliers") renderSuppliers();
+        if(section==="audit") renderAudits();
+        if(section==="reports") renderReports();
+
+    }
+
+    else{
+
+        if(section==="dashboard") renderDashboard();
+        if(section==="pos") renderPOS();
+        if(section==="stock") renderEmployeeStock();
+        if(section==="transactions") renderEmployeeTransactions();
+
+    }
+
+}
+
+
+/* =====================================================
+   OWNER DASHBOARD
+===================================================== */
+
+function renderDashboard(){
+
+    if(currentUser.role==="owner"){
+
+        renderOwnerDashboard();
+
+    }else{
+
+        renderEmployeeDashboard();
+
+    }
+
+}
+
+
+function renderOwnerDashboard(){
+
+    const sales=totalTodaySales();
+    const profit=totalTodayProfit();
+    const tx=totalTodayTransactions();
+    const collected=totalTodayCollected();
+    const remaining=Math.max(0,sales-collected);
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="date-box">
+
+            <strong>${todayString()}</strong>
+
+            <small>
+                Business Overview
+            </small>
+
+        </div>
+
+
+        <div class="sales-card">
+
+            <div class="sales-label">
+                💰 Today's Total Sales
+            </div>
+
+            <div class="sales-amount">
+                ${money(sales)}
+            </div>
+
+            <div class="sales-note">
+                ● All branches combined
+            </div>
+
+        </div>
+
+
+        <div class="summary-grid">
+
+            <div class="summary-card">
+                <div class="summary-icon">📈</div>
+                <div class="summary-title">Today's Profit</div>
+                <div class="summary-value">${money(profit)}</div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-icon">🧾</div>
+                <div class="summary-title">Transactions</div>
+                <div class="summary-value">${tx}</div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-icon">💵</div>
+                <div class="summary-title">Cash Collected</div>
+                <div class="summary-value">${money(collected)}</div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-icon">⚠️</div>
+                <div class="summary-title">Low Stock</div>
+                <div class="summary-value">${lowStockProducts().length} Items</div>
+            </div>
+
+        </div>
+
+
+        <div class="section-title">
+            💵 Cash Summary
+        </div>
+
+        <div class="card">
+
+            <div class="row" style="padding:7px 0;">
+                <span class="muted">Today's Sales</span>
+                <strong>${money(sales)}</strong>
+            </div>
+
+            <div class="row" style="padding:7px 0;">
+                <span class="muted">Cash Collected</span>
+                <strong>${money(collected)}</strong>
+            </div>
+
+            <div class="row" style="padding:7px 0;">
+                <span class="muted">Expected Remaining</span>
+                <strong>${money(remaining)}</strong>
+            </div>
+
+        </div>
+
+
+        <div class="section-title">
+            🏪 Sales by Branch
+        </div>
+
+        ${renderBranchSummary("Main Branch")}
+        ${renderBranchSummary("Branch 2")}
+
+
+        <div class="section-title">
+            👥 Employee Sales Today
+        </div>
+
+        ${employees.map(e=>`
+
+            <div class="card">
+
+                <div class="row">
+
+                    <strong>${e.name}</strong>
+
+                    <strong>${money(employeeSales(e.employeeId))}</strong>
+
+                </div>
+
+                <div class="muted">
+                    ${e.position} • ${e.branch} •
+                    ${employeeTransactionCount(e.employeeId)} transactions
+                </div>
+
+            </div>
+
+        `).join("")}
+
+
+        <div class="section-title">
+            ⚠️ Low Stock Alerts
+        </div>
+
+        ${
+            lowStockProducts().length
+            ?
+            lowStockProducts().map(p=>`
+
+                <div class="alert">
+
+                    <strong>🔴 ${p.name}</strong>
+
+                    <small>
+                        Stock: ${p.stock}
+                        • Minimum: ${p.min}
+                        • Suggested Restock:
+                        ${Math.max(0,p.target-p.stock)}
+                    </small>
+
+                </div>
+
+            `).join("")
+            :
+            `<div class="card">No low-stock items.</div>`
+        }
+
+
+        <div class="section-title">
+            ⚡ Quick Actions
+        </div>
+
+        <div class="quick-grid">
+
+            <div class="quick"
+                 onclick="showSection('cash')">
+                <div class="quick-icon">💵</div>
+                <span>Collect Cash</span>
+            </div>
+
+            <div class="quick"
+                 onclick="showSection('employees')">
+                <div class="quick-icon">👥</div>
+                <span>Employees</span>
+            </div>
+
+            <div class="quick"
+                 onclick="showSection('inventory')">
+                <div class="quick-icon">📦</div>
+                <span>Inventory</span>
+            </div>
+
+            <div class="quick"
+                 onclick="showSection('reports')">
+                <div class="quick-icon">📊</div>
+                <span>Reports</span>
+            </div>
+
+            <div class="quick"
+                 onclick="openSettings()">
+                <div class="quick-icon">⚙️</div>
+                <span>Settings</span>
+            </div>
+
+            <div class="quick"
+                 onclick="showSection('audit')">
+                <div class="quick-icon">📋</div>
+                <span>Audit</span>
+            </div>
+
+        </div>
+
+    `;
+
+
+    setBottomNav([
+
+        {
+            icon:"🏠",
+            name:"Dashboard",
+            action:"showSection('dashboard')"
+        },
+
+        {
+            icon:"💰",
+            name:"Sales",
+            action:"showSection('sales')"
+        },
+
+        {
+            icon:"📦",
+            name:"Inventory",
+            action:"showSection('inventory')"
+        },
+
+        {
+            icon:"📊",
+            name:"Reports",
+            action:"showSection('reports')"
+        }
+
+    ]);
+
+}
+
+
+function renderBranchSummary(branch){
+
+    return `
+
+        <div class="card">
+
+            <div class="row">
+
+                <strong>
+                    ${branch}
+                </strong>
+
+                <strong>
+                    ${money(branchSales(branch))}
+                </strong>
+
+            </div>
+
+            <div class="muted">
+                ${branchTransactionCount(branch)}
+                transactions
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =====================================================
+   EMPLOYEE DASHBOARD
+===================================================== */
+
+function renderEmployeeDashboard(){
+
+    const sales=todayTransactions()
+        .filter(t=>t.employeeId===currentUser.id)
+        .reduce((s,t)=>s+t.total,0);
+
+    const tx=todayTransactions()
+        .filter(t=>t.employeeId===currentUser.id);
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="date-box">
+
+            <strong>${todayString()}</strong>
+
+            <small>
+                ${currentUser.branch} • Sales Overview
+            </small>
+
+        </div>
+
+
+        <div class="sales-card">
+
+            <div class="sales-label">
+                💰 Today's Sales
+            </div>
+
+            <div class="sales-amount">
+                ${money(sales)}
+            </div>
+
+            <div class="sales-note">
+                ● Sales credited to you today
+            </div>
+
+        </div>
+
+
+        <div class="summary-grid">
+
+            <div class="summary-card">
+
+                <div class="summary-icon">
+                    🧾
+                </div>
+
+                <div class="summary-title">
+                    My Transactions
+                </div>
+
+                <div class="summary-value">
+                    ${tx.length}
+                </div>
+
+            </div>
+
+
+            <div class="summary-card">
+
+                <div class="summary-icon">
+                    💵
+                </div>
+
+                <div class="summary-title">
+                    Net Sales
+                </div>
+
+                <div class="summary-value">
+                    ${money(sales)}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="section-title">
+            👤 My Sales Today
+        </div>
+
+
+        <div class="my-sales">
+
+            <div class="muted">
+                Sales credited to you
+            </div>
+
+            <div class="my-sales-value">
+                ${money(sales)}
+            </div>
+
+        </div>
+
+
+        <div class="section-title">
+            🧾 Recent Transactions
+        </div>
+
+
+        ${
+            tx.length
+            ?
+            tx.slice().reverse().slice(0,10).map(t=>`
+
+                <div class="transaction">
+
+                    <div class="row">
+
+                        <strong>
+                            ${t.id}
+                        </strong>
+
+                        <strong>
+                            ${money(t.total)}
+                        </strong>
+
+                    </div>
+
+                    <div class="muted"
+                         style="margin-top:5px;">
+
+                        ${t.items.map(i=>
+                            `${i.name} x${i.qty}`
+                        ).join(", ")}
+
+                        • ${new Date(t.date)
+                            .toLocaleTimeString([],{
+                                hour:"numeric",
+                                minute:"2-digit"
+                            })}
+
+                    </div>
+
+                    <span class="status">
+                        COMPLETED
+                    </span>
+
+                </div>
+
+            `).join("")
+            :
+            `<div class="card">
+                No sales recorded today.
+             </div>`
+        }
+
+    `;
+
+
+    setBottomNav([
+
+        {
+            icon:"🏠",
+            name:"Dashboard",
+            action:"showSection('dashboard')"
+        },
+
+        {
+            icon:"🛒",
+            name:"POS",
+            action:"showSection('pos')"
+        },
+
+        {
+            icon:"📦",
+            name:"Stock",
+            action:"showSection('stock')"
+        },
+
+        {
+            icon:"🧾",
+            name:"Transactions",
+            action:"showSection('transactions')"
+        }
+
+    ]);
+
+}
+
+
+/* =====================================================
+   POS
+===================================================== */
+
+function renderPOS(){
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="section-title">
+            🛒 Point of Sale
+        </div>
+
+
+        <div class="form-card">
+
+            <div class="input-group">
+
+                <label>
+                    Search Product / SKU
+                </label>
+
+                <div class="autocomplete">
+
+                    <input
+                        id="posSearch"
+                        placeholder="Type product name or SKU"
+                        oninput="showProductSuggestions('posSearch','posSuggestions')">
+
+                    <div
+                        class="suggestions"
+                        id="posSuggestions">
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="section-title">
+            🛒 Cart
+        </div>
+
+
+        <div id="cartArea">
+        </div>
+
+    `;
+
+
+    renderCart();
+
+
+    setBottomNav([
+
+        {
+            icon:"🏠",
+            name:"Dashboard",
+            action:"showSection('dashboard')"
+        },
+
+        {
+            icon:"🛒",
+            name:"POS",
+            action:"showSection('pos')"
+        },
+
+        {
+            icon:"📦",
+            name:"Stock",
+            action:"showSection('stock')"
+        },
+
+        {
+            icon:"🧾",
+            name:"Transactions",
+            action:"showSection('transactions')"
+        }
+
+    ]);
+
+}
+
+
+function showProductSuggestions(inputId,suggestionId){
+
+    const input=document.getElementById(inputId);
+
+    const box=document.getElementById(suggestionId);
+
+    if(!input || !box) return;
+
+    const q=input.value.trim().toLowerCase();
+
+    if(!q){
+
+        box.innerHTML="";
+
+        return;
+
+    }
+
+
+    const matches=products.filter(p=>
+        p.name.toLowerCase().includes(q)
+        ||
+        p.sku.toLowerCase().includes(q)
+    );
+
+
+    box.innerHTML=matches.map(p=>`
+
+        <div class="suggestion"
+             onclick="selectPOSProduct(${p.id})">
+
+            <strong>
+                ${p.name}
+            </strong>
+
+            <small>
+                SKU: ${p.sku}
+                • Stock: ${p.stock}
+                • ${money(p.price)}
+            </small>
+
+        </div>
+
+    `).join("");
+
+
+    if(!matches.length){
+
+        box.innerHTML=
+            `<div class="suggestion">
+                No product found.
+             </div>`;
+
+    }
+
+}
+
+
+function selectPOSProduct(productId){
+
+    const product=products.find(p=>p.id===productId);
+
+    if(!product) return;
+
+    if(product.stock<=0){
+
+        alert("This product is out of stock.");
+
+        return;
+
+    }
+
+
+    const existing=card.find(i=>i.productId===productId);
+
+    if(existing){
+
+        if(existing.qty>=product.stock){
+
+            alert("Not enough stock.");
+
+            return;
+
+        }
+
+        existing.qty++;
+
+    }else{
+
+        card.push({
+            productId:product.id,
+            name:product.name,
+            price:product.price,
+            cost:product.cost,
+            qty:1
+        });
+
+    }
+
+
+    const input=document.getElementById("posSearch");
+
+    if(input) input.value="";
+
+    const box=document.getElementById("posSuggestions");
+
+    if(box) box.innerHTML="";
+
+    renderCart();
+
+}
+
+
+function renderCart(){
+
+    const area=document.getElementById("cartArea");
+
+    if(!area) return;
+
+
+    if(!card.length){
+
+        area.innerHTML=`
+
+            <div class="card">
+
+                <div style="text-align:center;
+                            padding:15px;
+                            color:#6b7280;">
+
+                    🛒 Cart is empty
+
+                </div>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    const total=card.reduce(
+        (sum,i)=>sum+(i.price*i.qty),0
+    );
+
+
+    area.innerHTML=
+
+        card.map((item,index)=>`
+
+            <div class="cart-item">
+
+                <div class="row">
+
+                    <strong>
+                        ${item.name}
+                    </strong>
+
+                    <strong>
+                        ${money(item.price*item.qty)}
+                    </strong>
+
+                </div>
+
+                <div class="qty-controls">
+
+                    <button
+                        class="qty-btn"
+                        onclick="changeCartQty(${index},-1)">
+                        −
+                    </button>
+
+                    <strong>
+                        ${item.qty}
+                    </strong>
+
+                    <button
+                        class="qty-btn"
+                        onclick="changeCartQty(${index},1)">
+                        +
+                    </button>
+
+                    <button
+                        class="btn btn-red"
+                        style="padding:7px 10px;margin-left:auto;"
+                        onclick="removeCartItem(${index})">
+
+                        Remove
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        `).join("")+
+
+        `
+
+        <div class="card">
+
+            <div class="row">
+
+                <strong>
+                    TOTAL
+                </strong>
+
+                <strong style="font-size:22px;">
+                    ${money(total)}
+                </strong>
+
+            </div>
+
+            <button
+                class="btn btn-green"
+                style="width:100%;margin-top:12px;"
+                onclick="completeSale()">
+
+                COMPLETE SALE
+
+            </button>
+
+        </div>
+
+        `;
+
+}
+
+
+function changeCartQty(index,change){
+
+    const item=card[index];
+
+    const product=products.find(
+        p=>p.id===item.productId
+    );
+
+    item.qty+=change;
+
+
+    if(item.qty<=0){
+
+        card.splice(index,1);
+
+    }
+
+
+    if(product && item.qty>product.stock){
+
+        item.qty=product.stock;
+
+        alert("Maximum available stock reached.");
+
+    }
+
+
+    renderCart();
+
+}
+
+
+function removeCartItem(index){
+
+    card.splice(index,1);
+
+    renderCart();
+
+}
+
+
+async function completeSale(){
+    if(!card.length){alert("Cart is empty.");return;}
+    const saleCart=card.map(i=>({...i}));
+    let total=0,profit=0;
+    
+    for(const item of saleCart){
+        const p=products.find(x=>String(x.id)===String(item.productId));
+        if(!p || p.stock < item.qty){
+            alert("Insufficient stock for " + item.name);
+            return;
+        }
+        total += Number(item.price) * Number(item.qty);
+        profit += (Number(item.price) - Number(item.cost)) * Number(item.qty);
+        p.stock -= item.qty; // deduct locally
+    }
+
+    const tx = {
+        id: "TX-" + String(Date.now()).slice(-8),
+        date: new Date().toISOString(),
+        branch: currentUser.branch,
+        employee: currentUser.name,
+        employeeId: currentUser.id,
+        items: saleCart,
+        total,
+        profit
+    };
+
+    transactions.unshift(tx);
+    saveLocalData();
+
+    if(navigator.onLine && databaseReady){
+        try {
+            await _supabase.from("transactions").insert({
+                id: tx.id,
+                date: tx.date,
+                branch: tx.branch,
+                employee: tx.employee,
+                employee_id: tx.employeeId,
+                items: tx.items,
+                total: tx.total,
+                profit: tx.profit
+            });
+        } catch(e){
+            console.warn("Failed syncing transaction online, saved in queue.", e);
+            const q = getOfflineQueue();
+            q.push({type: "insert_transaction", data: tx});
+            saveOfflineQueue(q);
+        }
+    } else {
+        const q = getOfflineQueue();
+        q.push({type: "insert_transaction", data: tx});
+        saveOfflineQueue(q);
+    }
+
+    card=[]; 
+    alert("SALE COMPLETED (Offline/Online Sync Active)\n\nTransaction: "+tx.id+"\nTotal: "+money(total)); 
+    renderDashboard();
+}
+
+
+/* =====================================================
+   INVENTORY
+===================================================== */
+
+function renderInventory(){
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="row"
+             style="margin-bottom:10px;">
+
+            <div class="section-title"
+                 style="margin:0;">
+
+                📦 Inventory
+
+            </div>
+
+            <button
+                class="btn btn-dark"
+                onclick="showSection('addItem')">
+
+                + Add Item
+
+            </button>
+
+        </div>
+
+
+        <div class="card">
+
+            <input
+                id="inventorySearch"
+                style="width:100%;
+                       padding:11px;
+                       border:1px solid #ddd;
+                       border-radius:10px;"
+                placeholder="Search product / SKU"
+                oninput="filterInventory()">
+
+        </div>
+
+
+        <div id="inventoryTable"></div>
+
+    `;
+
+
+    renderInventoryTable();
+
+    setBottomNav([
+
+        {
+            icon:"🏠",
+            name:"Dashboard",
+            action:"showSection('dashboard')"
+        },
+
+        {
+            icon:"📦",
+            name:"Inventory",
+            action:"showSection('inventory')"
+        },
+
+        {
+            icon:"➕",
+            name:"Add Item",
+            action:"showSection('addItem')"
+        },
+
+        {
+            icon:"📥",
+            name:"Restock",
+            action:"showSection('restock')"
+        }
+
+    ]);
+
+}
+
+
+function filterInventory(){
+
+    renderInventoryTable(
+        document.getElementById("inventorySearch").value
+    );
+
+}
+
+
+function renderInventoryTable(search=""){
+
+    const q=search.toLowerCase();
+
+    const list=products.filter(p=>
+        p.name.toLowerCase().includes(q)
+        ||
+        p.sku.toLowerCase().includes(q)
+    );
+
+
+    document.getElementById("inventoryTable").innerHTML=`
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        <th>Image</th>
+                        <th>Product</th>
+                        <th>SKU</th>
+                        <th>Category</th>
+                        <th>Size</th>
+                        <th>Model</th>
+                        <th>Color</th>
+                        <th>Cost</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    ${
+                        list.map(p=>`
+
+                            <tr>
+
+                                <td>
+                                    ${p.image ? `<img src="${p.image}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;">` : 'No Image'}
+                                </td>
+
+                                <td>
+                                    <strong>${p.name}</strong>
+                                </td>
+
+                                <td>${p.sku}</td>
+
+                                <td>${p.category || '-'}</td>
+
+                                <td>${p.sizes || '-'}</td>
+
+                                <td>${p.model || '-'}</td>
+
+                                <td>${p.color || '-'}</td>
+
+                                <td>${money(p.cost)}</td>
+
+                                <td>${money(p.price)}</td>
+
+                                <td>${p.stock}</td>
+
+                                <td>
+
+                                    ${
+                                        p.stock<=p.min
+                                        ?
+                                        `<span style="color:#dc2626;font-weight:bold;">
+                                            LOW
+                                         </span>`
+                                        :
+                                        `<span style="color:#16a34a;font-weight:bold;">
+                                            OK
+                                         </span>`
+                                    }
+
+                                </td>
+
+                                <td>
+                                    <button class="btn btn-blue" style="padding:5px 8px;font-size:10px;" onclick="openEditItemModal(${p.id})">Edit</button>
+                                    <button class="btn btn-red" style="padding:5px 8px;font-size:10px;" onclick="confirmDeleteItem(${p.id})">Delete</button>
+                                </td>
+
+                            </tr>
+
+                        `).join("")
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =====================================================
+   ADD ITEM (WITH AUTO-INCREMENTING SKU & LIVE AUTO SCANNER)
+===================================================== */
+
+function getNextAutoSKU(){
+    if(!products.length) return "0001";
+    let maxNum = 0;
+    products.forEach(p => {
+        let n = parseInt(p.sku, 10);
+        if(!isNaN(n) && n > maxNum) {
+            maxNum = n;
+        }
+    });
+    if(maxNum === 0) {
+        return String(products.length + 1).padStart(4, '0');
+    }
+    return String(maxNum + 1).padStart(4, '0');
+}
+
+function renderAddItem(){
+    uploadedImageBase64 = "";
+    const autoSku = getNextAutoSKU();
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="section-title">
+            ➕ Add New Item
+        </div>
+
+
+        <div class="form-card">
+
+            <div class="input-group">
+                <label>Item Image (Optional)</label>
+                <input type="file" id="newImage" accept="image/*" onchange="previewImage(event)" style="padding: 8px;">
+                <img id="imagePreview" src="" style="max-width: 100px; border-radius: 8px; display: none; margin-top: 10px; border: 1px solid #ddd;">
+            </div>
+
+
+            <div class="input-group">
+                <label>Item Name (Optional - auto-fills if empty)</label>
+                <input id="newName" placeholder="Example: Chain Lubricant">
+            </div>
+
+
+            <div class="input-group">
+                <label>SKU / Barcode</label>
+                <div style="display: flex; gap: 8px;">
+                    <input id="newSku" value="${autoSku}" placeholder="SKU / Barcode" style="flex: 1;">
+                    <button type="button" class="btn btn-dark" onclick="startLiveCameraScanner()" style="padding: 0 14px; font-size: 13px;">📷 Scan</button>
+                </div>
+            </div>
+
+
+            <div class="two-col">
+                <div class="input-group">
+                    <label>Category</label>
+                    <select id="newCategory" onchange="updateSizesDropdown('newCategory','newSizes')">
+                        <option value="">Select Category</option>
+                        ${shopCategories.map(c=>`<option value="${c}">${c}</option>`).join("")}
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Size / Variation</label>
+                    <select id="newSizes">
+                        <option value="">Select Size</option>
+                    </select>
+                </div>
+            </div>
+
+
+            <div class="two-col">
+                <div class="input-group">
+                    <label>Brand / Model</label>
+                    <select id="newModel">
+                        <option value="">Select Model</option>
+                        ${shopModels.map(m=>`<option value="${m}">${m}</option>`).join("")}
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <label>Color</label>
+                    <select id="newColor">
+                        <option value="">Select Color</option>
+                        ${shopColors.map(col=>`<option value="${col}">${col}</option>`).join("")}
+                    </select>
+                </div>
+            </div>
+
+
+            <div class="input-group">
+                <label>Supplier</label>
+                <select id="newSupplier">
+                    ${suppliers.map(s=>`<option>${s.name}</option>`).join("")}
+                </select>
+            </div>
+
+
+            <div class="two-col">
+                <div class="input-group">
+                    <label>Cost</label>
+                    <input id="newCost" type="number" placeholder="0">
+                </div>
+                <div class="input-group">
+                    <label>Selling Price</label>
+                    <input id="newPrice" type="number" placeholder="0">
+                </div>
+            </div>
+
+
+            <div class="two-col">
+                <div class="input-group">
+                    <label>Current Stock</label>
+                    <input id="newStock" type="number" placeholder="0">
+                </div>
+                <div class="input-group">
+                    <label>Minimum Stock</label>
+                    <input id="newMin" type="number" placeholder="0">
+                </div>
+            </div>
+
+
+            <div class="input-group">
+                <label>Target Stock</label>
+                <input id="newTarget" type="number" placeholder="0">
+            </div>
+
+
+            <button
+                class="btn btn-green"
+                style="width:100%;"
+                onclick="addItem()">
+
+                SAVE ITEM
+
+            </button>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =====================================================
+   LIVE REAL-TIME CAMERA BARCODE SCANNER LOGIC (SIMPLIFIED VIDEO STREAM)
+===================================================== */
+
+async function startLiveCameraScanner() {
+    if (!('BarcodeDetector' in window)) {
+        alert("Ang iyong browser ay hindi sumusuporta sa Live BarcodeDetector API.");
+        return;
+    }
+
+    showModal(
+        "📷 Live Barcode Scanner",
+        `
+        <div style="text-align: center;">
+            <video id="liveScannerVideo" autoplay playsinline style="width: 100%; max-height: 250px; background: #000; border-radius: 12px; object-fit: cover;"></video>
+            <p style="margin-top: 10px; font-size: 12px; color: #6b7280;">Itapat lang ang camera sa barcode. Awtomatikong kukunin ang code at ilalagay sa SKU / Barcode field.</p>
+        </div>
+        `
+    );
+
+    try {
+        const videoElement = document.getElementById("liveScannerVideo");
+        
+        // Use the rear camera on phones when available.
+        activeCameraStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+                facingMode: { ideal: "environment" },
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            },
+            audio: false
+        });
+
+        videoElement.srcObject = activeCameraStream;
+        isScanningLive = true;
+
+        const barcodeDetector = new BarcodeDetector({
+            formats: ['code_128', 'ean_13', 'ean_8', 'qr_code', 'upc_a', 'upc_e']
+        });
+
+        // Start scanning only after the camera has produced usable frames.
+        await videoElement.play();
+
+        const scanFrame = async () => {
+            if (!isScanningLive) return;
+
+            try {
+                if (videoElement.readyState >= HTMLMediaElement.HAVE_ENOUGH_DATA) {
+                    const barcodes = await barcodeDetector.detect(videoElement);
+
+                    if (barcodes.length > 0 && barcodes[0].rawValue) {
+                        const detectedCode = barcodes[0].rawValue.trim();
+                        const skuField = document.getElementById('newSku');
+
+                        if (skuField) {
+                            // Barcode only: do NOT save the item automatically.
+                            skuField.value = detectedCode;
+                            skuField.dispatchEvent(new Event('input', { bubbles: true }));
+                            skuField.focus();
+                        }
+
+                        stopLiveCameraScanner();
+                        closeModal();
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.error("Scanning frame error:", err);
+            }
+
+            if (isScanningLive) {
+                requestAnimationFrame(scanFrame);
+            }
+        };
+
+        requestAnimationFrame(scanFrame);
+
+    } catch (err) {
+        console.error("Camera access error:", err);
+        alert("Hindi mabuksan ang camera. Siguraduhing pinayagan ang pahintulot sa browser.");
+        closeModal();
+    }
+}
+
+function stopLiveCameraScanner() {
+    isScanningLive = false;
+    if (activeCameraStream) {
+        activeCameraStream.getTracks().forEach(track => track.stop());
+        activeCameraStream = null;
+    }
+}
+
+
+function updateSizesDropdown(catId, sizeId){
+    const category = document.getElementById(catId).value;
+    const sizesSelect = document.getElementById(sizeId);
+    
+    let options = '<option value="">Select Size / Variation</option>';
+    const availableSizes = shopSizes[category] || ["Standard"];
+    
+    availableSizes.forEach(sz => {
+        options += `<option value="${sz}">${sz}</option>`;
+    });
+    
+    sizesSelect.innerHTML = options;
+}
+
+
+async function addItem(){
+    stopLiveCameraScanner();
+    let name = document.getElementById("newName").value.trim();
+    const sku = document.getElementById("newSku").value.trim();
+    const category = document.getElementById("newCategory").value;
+    const sizes = document.getElementById("newSizes").value;
+    const model = document.getElementById("newModel").value;
+    const color = document.getElementById("newColor").value;
+    const supplier = document.getElementById("newSupplier").value;
+    const cost = Number(document.getElementById("newCost").value) || 0;
+    const price = Number(document.getElementById("newPrice").value) || 0;
+    const stock = Number(document.getElementById("newStock").value) || 0;
+    const min = Number(document.getElementById("newMin").value) || 0;
+    const target = Number(document.getElementById("newTarget").value) || 0;
+    const image = uploadedImageBase64;
+
+    if(!name){
+        name = (category ? category : "Item") + (sizes ? " " + sizes : "");
+    }
+
+    if(!sku){ alert("SKU is required."); return; } 
+
+    const newProdObj = {
+        id: Date.now(),
+        name, sku, category, size: sizes, model, color, supplier, cost, price, stock, minimum: min, target, image
+    };
+
+    products.push(normalizeProduct(newProdObj));
+    saveLocalData();
+
+    if(navigator.onLine && databaseReady){
+        try {
+            await _supabase.from("products").insert({
+                name, sku, category, size: sizes, model, color, supplier, cost, price, stock, minimum: min, target, image
+            });
+        } catch(e){
+            console.warn("Failed saving item online, queued.", e);
+            const q = getOfflineQueue();
+            q.push({type: "insert_product", data: newProdObj});
+            saveOfflineQueue(q);
+        }
+    } else {
+        const q = getOfflineQueue();
+        q.push({type: "insert_product", data: newProdObj});
+        saveOfflineQueue(q);
+    }
+    
+    alert("Item added successfully (Saved locally & synced online)."); 
+    showSection("inventory");
+}
+
+
+/* =====================================================
+   EDIT & BEAUTIFIED MODAL DELETE ITEM LOGIC
+===================================================== */
+
+function openEditItemModal(id){
+    const p = products.find(x => x.id === id);
+    if(!p) return;
+
+    showModal(
+        "✏️ Edit Item",
+        `
+        <div class="input-group">
+            <label>Item Name</label>
+            <input id="editName" value="${p.name}">
+        </div>
+        <div class="input-group">
+            <label>SKU / Barcode</label>
+            <input id="editSku" value="${p.sku}">
+        </div>
+        <div class="two-col">
+            <div class="input-group">
+                <label>Category</label>
+                <select id="editCategory" onchange="updateSizesDropdown('editCategory','editSizes')">
+                    ${shopCategories.map(c=>`<option value="${c}" ${p.category===c?"selected":""}>${c}</option>`).join("")}
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Size / Variation</label>
+                <select id="editSizes">
+                    ${(shopSizes[p.category] || ["Standard"]).map(sz=>`<option value="${sz}" ${p.sizes===sz?"selected":""}>${sz}</option>`).join("")}
+                </select>
+            </div>
+        </div>
+        <div class="two-col">
+            <div class="input-group">
+                <label>Brand / Model</label>
+                <select id="editModel">
+                    ${shopModels.map(m=>`<option value="${m}" ${p.model===m?"selected":""}>${m}</option>`).join("")}
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Color</label>
+                <select id="editColor">
+                    ${shopColors.map(col=>`<option value="${col}" ${p.color===col?"selected":""}>${col}</option>`).join("")}
+                </select>
+            </div>
+        </div>
+        <div class="two-col">
+            <div class="input-group">
+                <label>Cost</label>
+                <input id="editCost" type="number" value="${p.cost}">
+            </div>
+            <div class="input-group">
+                <label>Selling Price</label>
+                <input id="editPrice" type="number" value="${p.price}">
+            </div>
+        </div>
+        <div class="two-col">
+            <div class="input-group">
+                <label>Minimum Stock</label>
+                <input id="editMin" type="number" value="${p.min}">
+            </div>
+            <div class="input-group">
+                <label>Target Stock</label>
+                <input id="editTarget" type="number" value="${p.target}">
+            </div>
+        </div>
+        <button class="btn btn-green" style="width:100%; margin-top:10px;" onclick="saveEditedItem(${p.id})">UPDATE ITEM</button>
+        `
+    );
+}
+
+async function saveEditedItem(id){
+    const name = document.getElementById("editName").value.trim();
+    const sku = document.getElementById("editSku").value.trim();
+    const category = document.getElementById("editCategory").value;
+    const sizes = document.getElementById("editSizes").value;
+    const model = document.getElementById("editModel").value;
+    const color = document.getElementById("editColor").value;
+    const cost = Number(document.getElementById("editCost").value) || 0;
+    const price = Number(document.getElementById("editPrice").value) || 0;
+    const min = Number(document.getElementById("editMin").value) || 0;
+    const target = Number(document.getElementById("editTarget").value) || 0;
+
+    if(!name || !sku){ alert("Name and SKU are required."); return; }
+
+    const index = products.findIndex(x => x.id === id);
+    if(index !== -1){
+        products[index] = {...products[index], name, sku, category, sizes, model, color, cost, price, min, target};
+        saveLocalData();
+    }
+
+    if(navigator.onLine && databaseReady){
+        try {
+            await _supabase.from("products").update({
+                name, sku, category, size: sizes, model, color, cost, price, minimum: min, target
+            }).eq("id", id);
+        } catch(e){ console.warn("Could not update online:", e); }
+    }
+
+    closeModal();
+    alert("Item updated successfully!");
+    renderInventoryTable();
+}
+
+function confirmDeleteItem(id){
+    const p = products.find(x => x.id === id);
+    if(!p) return;
+
+    showModal(
+        "⚠️ Delete Item",
+        `
+        <div style="margin-bottom:15px; font-size:13px; color:#374151;">
+            Are you sure you want to delete <strong>${p.name}</strong> (SKU: ${p.sku})? This action cannot be undone.
+        </div>
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-gray" style="flex:1;" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-red" style="flex:1;" onclick="executeDeleteItem(${p.id})">Yes, Delete</button>
+        </div>
+        `
+    );
+}
+
+async function executeDeleteItem(id){
+    products = products.filter(x => x.id !== id);
+    saveLocalData();
+
+    if(navigator.onLine && databaseReady){
+        try {
+            await _supabase.from("products").delete().eq("id", id);
+        } catch(e){ console.warn("Could not delete online:", e); }
+    }
+
+    closeModal();
+    renderInventoryTable();
+}
+
+
+/* =====================================================
+   SETTINGS & CATEGORY/SIZE/MODEL/COLOR MANAGEMENT
+===================================================== */
+
+function openSettings(){
+    closeProfileMenu();
+    showModal(
+        "⚙️ Settings & Dynamic Management",
+        `
+        <div class="info-box" style="cursor:pointer;" onclick="openManageCategories()">
+            <strong>📂 Manage Categories</strong>
+            <small>Add or remove item categories</small>
+        </div>
+        <div class="info-box" style="cursor:pointer;" onclick="openManageSizes()">
+            <strong>📏 Manage Sizes per Category</strong>
+            <small>Add size options (e.g. 1L, 0.8L)</small>
+        </div>
+        <div class="info-box" style="cursor:pointer;" onclick="openManageModels()">
+            <strong>🏍️ Manage Models / Brands</strong>
+            <small>Add motorcycle brands or models</small>
+        </div>
+        <div class="info-box" style="cursor:pointer;" onclick="openManageColors()">
+            <strong>🎨 Manage Colors</strong>
+            <small>Add product color options</small>
+        </div>
+        `
+    );
+}
+
+function openManageCategories(){
+    showModal(
+        "📂 Manage Categories",
+        `
+        <div style="margin-bottom:12px;">
+            <strong>Existing Categories:</strong>
+            <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:5px;">
+                ${shopCategories.map(c=>`<span style="background:#e5e7eb; padding:4px 8px; border-radius:6px; font-size:11px;">${c}</span>`).join("")}
+            </div>
+        </div>
+        <div class="input-group">
+            <label>New Category Name</label>
+            <input id="newCatInput" placeholder="e.g. Helmets">
+        </div>
+        <button class="btn btn-green" style="width:100%;" onclick="addNewCategory()">ADD CATEGORY</button>
+        `
+    );
+}
+
+async function addNewCategory(){
+    const val = document.getElementById("newCatInput").value.trim();
+    if(!val) return;
+    if(shopCategories.includes(val)){ alert("Category already exists."); return; }
+    
+    shopCategories.push(val);
+    if(!shopSizes[val]) shopSizes[val] = ["Standard"];
+
+    if(navigator.onLine && databaseReady){
+        try { await _supabase.from("shop_categories").insert({name: val}); } catch(e){}
+    }
+    alert("Category added successfully!");
+    closeModal();
+    openSettings();
+}
+
+function openManageSizes(){
+    showModal(
+        "📏 Manage Sizes",
+        `
+        <div class="input-group">
+            <label>Select Category</label>
+            <select id="sizeCatSelect" onchange="renderSizeListForCat()">
+                ${shopCategories.map(c=>`<option value="${c}">${c}</option>`).join("")}
+            </select>
+        </div>
+        <div id="sizeListContainer" style="margin-bottom:10px;"></div>
+        <div class="input-group">
+            <label>New Size for Selected Category</label>
+            <input id="newSizeInput" placeholder="e.g. 2 L or XL">
+        </div>
+        <button class="btn btn-green" style="width:100%;" onclick="addNewSize()">ADD SIZE</button>
+        `
+    );
+    renderSizeListForCat();
+}
+
+function renderSizeListForCat(){
+    const cat = document.getElementById("sizeCatSelect")?.value;
+    const container = document.getElementById("sizeListContainer");
+    if(!cat || !container) return;
+    const sizes = shopSizes[cat] || [];
+    container.innerHTML = `<small class="muted">Sizes: ${sizes.join(", ")}</small>`;
+}
+
+async function addNewSize(){
+    const cat = document.getElementById("sizeCatSelect").value;
+    const sz = document.getElementById("newSizeInput").value.trim();
+    if(!sz) return;
+    if(!shopSizes[cat]) shopSizes[cat] = [];
+    if(shopSizes[cat].includes(sz)){ alert("Size already exists for this category."); return; }
+
+    shopSizes[cat].push(sz);
+    if(navigator.onLine && databaseReady){
+        try { await _supabase.from("shop_sizes").insert({category: cat, size_name: sz}); } catch(e){}
+    }
+    alert("Size added successfully!");
+    renderSizeListForCat();
+    document.getElementById("newSizeInput").value = "";
+}
+
+function openManageModels(){
+    showModal(
+        "🏍️ Manage Models / Brands",
+        `
+        <div style="margin-bottom:12px;">
+            <strong>Existing Models:</strong>
+            <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:5px;">
+                ${shopModels.map(m=>`<span style="background:#e5e7eb; padding:4px 8px; border-radius:6px; font-size:11px;">${m}</span>`).join("")}
+            </div>
+        </div>
+        <div class="input-group">
+            <label>New Model / Brand Name</label>
+            <input id="newModelInput" placeholder="e.g. Ducati, HondaX">
+        </div>
+        <button class="btn btn-green" style="width:100%;" onclick="addNewModel()">ADD MODEL</button>
+        `
+    );
+}
+
+async function addNewModel(){
+    const val = document.getElementById("newModelInput").value.trim();
+    if(!val) return;
+    if(shopModels.includes(val)){ alert("Model already exists."); return; }
+
+    shopModels.push(val);
+    if(navigator.onLine && databaseReady){
+        try { await _supabase.from("shop_models").insert({name: val}); } catch(e){}
+    }
+    alert("Model added successfully!");
+    closeModal();
+    openSettings();
+}
+
+function openManageColors(){
+    showModal(
+        "🎨 Manage Colors",
+        `
+        <div style="margin-bottom:12px;">
+            <strong>Existing Colors:</strong>
+            <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:5px;">
+                ${shopColors.map(c=>`<span style="background:#e5e7eb; padding:4px 8px; border-radius:6px; font-size:11px;">${c}</span>`).join("")}
+            </div>
+        </div>
+        <div class="input-group">
+            <label>New Color Name</label>
+            <input id="newColorInput" placeholder="e.g. Neon Green">
+        </div>
+        <button class="btn btn-green" style="width:100%;" onclick="addNewColor()">ADD COLOR</button>
+        `
+    );
+}
+
+async function addNewColor(){
+    const val = document.getElementById("newColorInput").value.trim();
+    if(!val) return;
+    if(shopColors.includes(val)){ alert("Color already exists."); return; }
+
+    shopColors.push(val);
+    if(navigator.onLine && databaseReady){
+        try { await _supabase.from("shop_colors").insert({name: val}); } catch(e){}
+    }
+    alert("Color added successfully!");
+    closeModal();
+    openSettings();
+}
+
+
+/* =====================================================
+   RESTOCK & PRINTABLE RESTOCK LIST
+===================================================== */
+
+function renderRestock(){
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="row" style="margin-bottom:10px;">
+            <div class="section-title" style="margin:0;">
+                📥 Restock Inventory
+            </div>
+            <button class="btn btn-dark" onclick="printRestockList()">
+                🖨️ Print Restock List
+            </button>
+        </div>
+
+
+        <div class="form-card">
+
+            <div class="input-group">
+
+                <label>
+                    Product Name / SKU
+                </label>
+
+                <div class="autocomplete">
+
+                    <input
+                        id="restockSearch"
+                        placeholder="Type product or SKU"
+                        oninput="showRestockSuggestions()">
+
+                    <div
+                        id="restockSuggestions"
+                        class="suggestions">
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>
+                    Quantity to Add
+                </label>
+
+                <input
+                    id="restockQty"
+                    type="number"
+                    min="1"
+                    placeholder="Quantity">
+
+            </div>
+
+
+            <button
+                class="btn btn-green"
+                style="width:100%;"
+                onclick="performRestock()">
+
+                ADD STOCK
+
+            </button>
+
+        </div>
+
+
+        <div class="section-title">
+            ⚠️ Suggested Restock
+        </div>
+
+
+        ${
+            lowStockProducts().map(p=>`
+
+                <div class="card">
+
+                    <div class="row">
+
+                        <strong>
+                            ${p.name}
+                        </strong>
+
+                        <strong>
+                            +${Math.max(0,p.target-p.stock)}
+                        </strong>
+
+                    </div>
+
+                    <div class="muted">
+
+                        Current: ${p.stock}
+                        • Minimum: ${p.min}
+                        • Target: ${p.target}
+
+                    </div>
+
+                </div>
+
+            `).join("")
+        }
+
+    `;
+
+}
+
+
+function printRestockList(){
+    const lowItems = lowStockProducts();
+    if(!lowItems.length){
+        alert("No items currently need restocking.");
+        return;
+    }
+
+    document.getElementById("printArea").innerHTML=`
+        <h1 style="text-align:center; margin-bottom:5px;">Motor Shop Restock List</h1>
+        <p style="text-align:center; margin-bottom:15px;"><strong>Date:</strong> ${new Date().toLocaleString()} | <strong>Branch:</strong> ${currentUser.branch}</p>
+        <table style="width:100%; border-collapse:collapse;">
+            <thead>
+                <tr>
+                    <th style="border:1px solid #000; padding:8px;">Product Name</th>
+                    <th style="border:1px solid #000; padding:8px;">SKU</th>
+                    <th style="border:1px solid #000; padding:8px;">Current Stock</th>
+                    <th style="border:1px solid #000; padding:8px;">Target</th>
+                    <th style="border:1px solid #000; padding:8px;">Suggested Order Qty</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${lowItems.map(p=>`
+                    <tr>
+                        <td style="border:1px solid #000; padding:8px;">${p.name}</td>
+                        <td style="border:1px solid #000; padding:8px;">${p.sku}</td>
+                        <td style="border:1px solid #000; padding:8px; text-align:center;">${p.stock}</td>
+                        <td style="border:1px solid #000; padding:8px; text-align:center;">${p.target}</td>
+                        <td style="border:1px solid #000; padding:8px; text-align:center; font-weight:bold;">${Math.max(0, p.target - p.stock)}</td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
+
+    window.print();
+}
+
+
+let selectedRestockProductId=null;
+
+
+function showRestockSuggestions(){
+
+    const input=document.getElementById("restockSearch");
+
+    const box=document.getElementById("restockSuggestions");
+
+    const q=input.value.toLowerCase().trim();
+
+
+    selectedRestockProductId=null;
+
+
+    const matches=products.filter(p=>
+        p.name.toLowerCase().includes(q)
+        ||
+        p.sku.toLowerCase().includes(q)
+    );
+
+
+    box.innerHTML=matches.map(p=>`
+
+        <div class="suggestion"
+             onclick="selectRestockProduct(${p.id})">
+
+            <strong>${p.name}</strong>
+
+            <small>
+                SKU: ${p.sku}
+                • Current Stock: ${p.stock}
+            </small>
+
+        </div>
+
+    `).join("");
+
+}
+
+
+function selectRestockProduct(id){
+
+    const p=products.find(x=>x.id===id);
+
+    selectedRestockProductId=id;
+
+    document.getElementById("restockSearch").value=p.name;
+
+    document.getElementById("restockSuggestions").innerHTML="";
+
+}
+
+
+async function performRestock(){
+    if(!selectedRestockProductId){alert("Please select a product.");return;}
+    const qty=Number(document.getElementById("restockQty").value); if(!qty||qty<=0){alert("Enter a valid quantity.");return;}
+    
+    const p=products.find(x=>String(x.id)===String(selectedRestockProductId));
+    if(!p){alert("Product not found.");return;}
+    
+    p.stock += qty;
+    saveLocalData();
+
+    if(navigator.onLine && databaseReady){
+        try {
+            await _supabase.from("products").update({stock: p.stock}).eq("id", p.id);
+        } catch(e){ console.warn("Restock sync failed:", e); }
+    }
+
+    alert("RESTOCK COMPLETED\n\n"+p.name+"\nAdded: "+qty+"\nNew Stock: "+p.stock);
+    showSection("restock");
+}
+
+
+/* =====================================================
+   SALES
+===================================================== */
+
+function renderSales(){
+
+    const list=
+        currentUser.role==="owner"
+        ?
+        todayTransactions()
+        :
+        todayTransactions().filter(
+            t=>t.employeeId===currentUser.id
+        );
+
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="section-title">
+            💰 Sales
+        </div>
+
+
+        <div class="sales-card">
+
+            <div class="sales-label">
+                Today's Sales
+            </div>
+
+            <div class="sales-amount">
+
+                ${money(
+                    list.reduce(
+                        (s,t)=>s+t.total,0
+                    )
+                )}
+
+            </div>
+
+        </div>
+
+
+        ${
+            list.length
+            ?
+            list.slice().reverse().map(t=>`
+
+                <div class="transaction">
+
+                    <div class="row">
+
+                        <strong>${t.id}</strong>
+
+                        <strong>${money(t.total)}</strong>
+
+                    </div>
+
+                    <div class="muted"
+                         style="margin-top:5px;">
+
+                        ${t.branch}
+                        •
+                        ${t.employee}
+
+                    </div>
+
+                    <div class="muted"
+                         style="margin-top:4px;">
+
+                        ${t.items.map(i=>
+                            `${i.name} x${i.qty}`
+                        ).join(", ")}
+
+                    </div>
+
+                    <span class="status">
+                        COMPLETED
+                    </span>
+
+                </div>
+
+            `).join("")
+            :
+            `<div class="card">
+                No sales found.
+             </div>`
+        }
+
+    `;
+
+}
+
+
+/* =====================================================
+   CASH COLLECTION
+===================================================== */
+
+function renderCash(){
+
+    const sales=totalTodaySales();
+    const collected=totalTodayCollected();
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="section-title">
+            💵 Cash Collection
+        </div>
+
+
+        <div class="summary-grid">
+
+            <div class="summary-card">
+
+                <div class="summary-icon">💰</div>
+
+                <div class="summary-title">
+                    Today's Sales
+                </div>
+
+                <div class="summary-value">
+                    ${money(sales)}
+                </div>
+
+            </div>
+
+
+            <div class="summary-card">
+
+                <div class="summary-icon">💵</div>
+
+                <div class="summary-title">
+                    Collected
+                </div>
+
+                <div class="summary-value">
+                    ${money(collected)}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="section-title">
+            ➕ Record Collection
+        </div>
+
+
+        <div class="form-card">
+
+            <div class="input-group">
+
+                <label>
+                    Branch
+                </label>
+
+                <select id="collectionBranch">
+
+                    <option>Main Branch</option>
+                    <option>Branch 2</option>
+
+                </select>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>
+                    Amount Collected
+                </label>
+
+                <input
+                    id="collectionAmount"
+                    type="number"
+                    placeholder="₱0.00">
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>
+                    Purpose / Note
+                </label>
+
+                <input
+                    id="collectionPurpose"
+                    value="Branch cash collection"
+                    placeholder="Purpose">
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>
+                    Owner PIN
+                </label>
+
+                <input
+                    id="collectionPin"
+                    type="password"
+                    placeholder="Enter Owner PIN">
+
+            </div>
+
+
+            <button
+                class="btn btn-green"
+                style="width:100%;"
+                onclick="recordCashCollection()">
+
+                RECORD CASH COLLECTION
+
+            </button>
+
+        </div>
+
+
+        <div class="section-title">
+            📋 Collection History
+        </div>
+
+
+        ${
+            cashCollections.length
+            ?
+            cashCollections.slice().reverse().map(c=>`
+
+                <div class="card">
+
+                    <div class="row">
+
+                        <strong>
+                            ${c.branch}
+                        </strong>
+
+                        <strong>
+                            ${money(c.amount)}
+                        </strong>
+
+                    </div>
+
+                    <div class="muted">
+                        ${new Date(c.date).toLocaleString()}
+                        • ${c.collectedBy}
+                    </div>
+
+                    <div class="muted">
+                        ${c.purpose}
+                    </div>
+
+                </div>
+
+            `).join("")
+            :
+            `<div class="card">
+                No cash collections recorded yet.
+             </div>`
+        }
+
+    `;
+
+}
+
+
+async function recordCashCollection(){
+    const branch=document.getElementById("collectionBranch").value,amount=Number(document.getElementById("collectionAmount").value),purpose=document.getElementById("collectionPurpose").value,pin=document.getElementById("collectionPin").value;
+    if(!amount||amount<=0){alert("Enter a valid amount.");return;}if(pin!==OWNER_PIN){alert("❌ Incorrect Owner PIN.\n\nCash collection was NOT recorded.");return;}
+    
+    const cashObj = {
+        id: Date.now(),
+        date: new Date().toISOString(),
+        branch,
+        amount,
+        collectedBy: currentUser.name,
+        purpose
+    };
+
+    cashCollections.unshift(normalizeCash(cashObj));
+    saveLocalData();
+
+    if(navigator.onLine && databaseReady){
+        try {
+            await _supabase.from("cash_collections").insert({
+                date: cashObj.date,
+                branch: cashObj.branch,
+                amount: cashObj.amount,
+                collected_by: cashObj.collectedBy,
+                purpose: cashObj.purpose
+            });
+        } catch(e){
+            const q = getOfflineQueue();
+            q.push({type: "insert_cash", data: cashObj});
+            saveOfflineQueue(q);
+        }
+    } else {
+        const q = getOfflineQueue();
+        q.push({type: "insert_cash", data: cashObj});
+        saveOfflineQueue(q);
+    }
+
+    alert("✅ CASH COLLECTION RECORDED (Synced)\n\nBranch: "+branch+"\nAmount: "+money(amount));
+    showSection("cash");
+}
+
+
+/* =====================================================
+   EMPLOYEES
+===================================================== */
+
+function renderEmployees(){
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="row">
+
+            <div class="section-title"
+                 style="margin:0 0 10px;">
+
+                👥 Employees
+
+            </div>
+
+            <button
+                class="btn btn-dark"
+                onclick="openAddEmployee()">
+
+                + Add Employee
+
+            </button>
+
+        </div>
+
+
+        ${
+            employees.map(e=>`
+
+                <div class="card">
+
+                    <div class="row">
+
+                        <strong>
+                            ${e.name}
+                        </strong>
+
+                        <span
+                            style="font-size:10px;
+                                   color:${e.status==="Active"?"#16a34a":"#dc2626"};">
+
+                            ● ${e.status}
+
+                        </span>
+
+                    </div>
+
+                    <div class="muted">
+                        ID: ${e.employeeId}
+                    </div>
+
+                    <div class="muted">
+                        ${e.position} • ${e.branch}
+                    </div>
+
+                    <div style="margin-top:10px;">
+
+                        <button
+                            class="btn btn-gray"
+                            onclick="editEmployee(${e.id})">
+
+                            Edit
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            `).join("")
+        }
+
+    `;
+
+}
+
+
+function openAddEmployee(){
+
+    showModal(
+
+        "➕ Add Employee",
+
+        `
+
+        <div class="input-group">
+            <label>Full Name</label>
+            <input id="empName"
+                   placeholder="Employee name">
+        </div>
+
+        <div class="input-group">
+            <label>Employee ID</label>
+            <input id="empId"
+                   placeholder="EMP-004">
+        </div>
+
+        <div class="input-group">
+            <label>Branch</label>
+            <select id="empBranch">
+                <option>Main Branch</option>
+                <option>Branch 2</option>
+            </select>
+        </div>
+
+        <div class="input-group">
+            <label>Position</label>
+            <input id="empPosition"
+                   placeholder="Mechanic / Cashier">
+        </div>
+
+        <div class="input-group">
+            <label>Temporary Password</label>
+            <input id="empPassword"
+                   type="password"
+                   placeholder="Temporary password">
+        </div>
+
+        <button
+            class="btn btn-green"
+            style="width:100%;"
+            onclick="addEmployee()">
+
+            SAVE EMPLOYEE
+
+        </button>
+
+        `
+
+    );
+
+}
+
+
+async function addEmployee(){
+    const name=document.getElementById("empName").value.trim(),employeeId=document.getElementById("empId").value.trim(),branch=document.getElementById("empBranch").value,position=document.getElementById("empPosition").value.trim(),password=document.getElementById("empPassword").value;
+    if(!name||!employeeId||!password){alert("Name, Employee ID and password are required.");return;}if(employees.some(e=>(e.employeeId||"").toLowerCase()===employeeId.toLowerCase())){alert("Employee ID already exists.");return;}
+    
+    const empObj = {
+        id: Date.now(),
+        name,
+        employeeId,
+        branch,
+        position: position || "Employee",
+        status: "Active",
+        password
+    };
+
+    employees.push(normalizeEmployee(empObj));
+    saveLocalData();
+
+    if(navigator.onLine && databaseReady){
+        try {
+            await _supabase.from("employees").insert({
+                name, employee_id: employeeId, branch, position: empObj.position, status: "Active", password
+            });
+        } catch(e){}
+    }
+
+    closeModal();
+    alert("Employee added successfully!");
+    showSection("employees");
+}
+
+
+function editEmployee(id){
+
+    const e=employees.find(x=>x.id===id);
+
+    if(!e) return;
+
+
+    showModal(
+
+        "👤 Edit Employee",
+
+        `
+
+        <div class="info-box">
+            <small>Name</small>
+            <strong>${e.name}</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Employee ID</small>
+            <strong>${e.employeeId}</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Branch</small>
+            <strong>${e.branch}</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Position</small>
+            <strong>${e.position}</strong>
+        </div>
+
+        <button
+            class="btn ${e.status==="Active"?"btn-red":"btn-green"}"
+            style="width:100%;margin-top:10px;"
+            onclick="toggleEmployeeStatus(${e.id})">
+
+            ${e.status==="Active"
+                ?"Deactivate Employee"
+                :"Activate Employee"}
+
+        </button>
+
+        `
+
+    );
+
+}
+
+
+async function toggleEmployeeStatus(id){
+    const e=employees.find(x=>String(x.id)===String(id));
+    if(!e)return;
+    e.status = e.status === "Active" ? "Inactive" : "Active";
+    saveLocalData();
+
+    if(navigator.onLine && databaseReady){
+        try {
+            await _supabase.from("employees").update({status: e.status}).eq("id", e.id);
+        } catch(e){}
+    }
+
+    closeModal();
+    showSection("employees");
+}
+
+
+/* =====================================================
+   SUPPLIERS
+===================================================== */
+
+function renderSuppliers(){
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="section-title">
+            🚚 Suppliers
+        </div>
+
+
+        ${
+            suppliers.map(s=>`
+
+                <div class="card">
+
+                    <strong>
+                        ${s.name}
+                    </strong>
+
+                    <div class="muted">
+                        📞 ${s.contact}
+                    </div>
+
+                </div>
+
+            `).join("")
+        }
+
+
+        <div class="section-title">
+            ➕ Add Supplier
+        </div>
+
+
+        <div class="form-card">
+
+            <div class="input-group">
+                <label>Supplier Name</label>
+                <input id="supplierName"
+                       placeholder="Supplier name">
+            </div>
+
+            <div class="input-group">
+                <label>Contact Number</label>
+                <input id="supplierContact"
+                       placeholder="09XXXXXXXXX">
+            </div>
+
+            <button
+                class="btn btn-green"
+                style="width:100%;"
+                onclick="addSupplier()">
+
+                SAVE SUPPLIER
+
+            </button>
+
+        </div>
+
+    `;
+
+}
+
+
+async function addSupplier(){
+    const name=document.getElementById("supplierName").value.trim(),contact=document.getElementById("supplierContact").value.trim();if(!name){alert("Supplier name is required.");return;}
+    
+    const supObj = { id: Date.now(), name, contact };
+    suppliers.push(normalizeSupplier(supObj));
+    saveLocalData();
+
+    if(navigator.onLine && databaseReady){
+        try { await _supabase.from("suppliers").insert({name, contact}); } catch(e){}
+    }
+
+    alert("Supplier added successfully.");
+    showSection("suppliers");
+}
+
+
+/* =====================================================
+   AUDIT
+===================================================== */
+
+function renderAudits(){
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="section-title">
+            📋 Physical Inventory Audit
+        </div>
+
+
+        <div class="form-card">
+
+            <div class="input-group">
+
+                <label>
+                    Assigned Employee
+                </label>
+
+                <select id="auditEmployee">
+
+                    ${
+                        employees.map(e=>
+                            `<option value="${e.employeeId}">
+                                ${e.name} • ${e.branch}
+                             </option>`
+                        ).join("")
+                    }
+
+                </select>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>
+                    Branch
+                </label>
+
+                <select id="auditBranch">
+
+                    <option>Main Branch</option>
+                    <option>Branch 2</option>
+
+                </select>
+
+            </div>
+
+
+            <button
+                class="btn btn-dark"
+                style="width:100%;"
+                onclick="createAudit()">
+
+                CREATE PRINTABLE INVENTORY SHEET
+
+            </button>
+
+        </div>
+
+
+        <div class="section-title">
+            📚 Previous Audits
+        </div>
+
+
+        ${
+            audits.length
+            ?
+            audits.slice().reverse().map(a=>`
+
+                <div class="card">
+
+                    <strong>
+                        ${a.branch}
+                    </strong>
+
+                    <div class="muted">
+                        ${a.employee}
+                    </div>
+
+                    <div class="muted">
+                        ${new Date(a.date).toLocaleString()}
+                    </div>
+
+                </div>
+
+            `).join("")
+            :
+            `<div class="card">
+                No inventory audits yet.
+             </div>`
+        }
+
+    `;
+
+}
+
+
+async function createAudit(){
+    const employeeId=document.getElementById("auditEmployee").value,branch=document.getElementById("auditBranch").value,employee=employees.find(e=>String(e.employeeId)===String(employeeId));
+    const audit={id: Date.now(), date:new Date().toISOString(),branch,employee:employee?employee.name:"Unknown",employeeId,products:products.map(p=>({name:p.name,sku:p.sku,systemQty:p.stock}))};
+    
+    audits.unshift(normalizeAudit(audit));
+    saveLocalData();
+
+    if(navigator.onLine && databaseReady){
+        try {
+            await _supabase.from("inventory_audits").insert({
+                date: audit.date, branch: audit.branch, employee: audit.employee, employee_id: audit.employeeId, products: audit.products
+            });
+        } catch(e){}
+    }
+
+    printInventorySheet(audit);
+}
+
+
+function printInventorySheet(audit){
+
+    document.getElementById("printArea").innerHTML=`
+
+        <h1>Motor Shop Inventory Count Sheet</h1>
+
+        <p>
+            <strong>Date:</strong>
+            ${new Date(audit.date).toLocaleString()}
+        </p>
+
+        <p>
+            <strong>Branch:</strong>
+            ${audit.branch}
+        </p>
+
+        <p>
+            <strong>Assigned Employee:</strong>
+            ${audit.employee}
+        </p>
+
+        <br>
+
+        <table style="width:100%;border-collapse:collapse;">
+
+            <tr>
+                <th style="border:1px solid #000;padding:8px;">
+                    Product
+                </th>
+
+                <th style="border:1px solid #000;padding:8px;">
+                    SKU
+                </th>
+
+                <th style="border:1px solid #000;padding:8px;">
+                    System Qty
+                </th>
+
+                <th style="border:1px solid #000;padding:8px;">
+                    Actual Qty
+                </th>
+
+                <th style="border:1px solid #000;padding:8px;">
+                    Difference
+                </th>
+            </tr>
+
+            ${
+                audit.products.map(p=>`
+
+                    <tr>
+
+                        <td style="border:1px solid #000;padding:8px;">
+                            ${p.name}
+                        </td>
+
+                        <td style="border:1px solid #000;padding:8px;">
+                            ${p.sku}
+                        </td>
+
+                        <td style="border:1px solid #000;padding:8px;">
+                            ${p.systemQty}
+                        </td>
+
+                        <td style="border:1px solid #000;padding:8px;height:35px;">
+                        </td>
+
+                        <td style="border:1px solid #000;padding:8px;">
+                        </td>
+
+                    </tr>
+
+                `).join("")
+            }
+
+        </table>
+
+    `;
+
+
+    window.print();
+
+}
+
+
+/* =====================================================
+   REPORTS
+===================================================== */
+
+function renderReports(){
+
+    const sales=totalTodaySales();
+    const profit=totalTodayProfit();
+    const tx=totalTodayTransactions();
+
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="section-title">
+            📊 Reports
+        </div>
+
+
+        <div class="summary-grid">
+
+            <div class="summary-card">
+
+                <div class="summary-icon">💰</div>
+
+                <div class="summary-title">
+                    Today's Sales
+                </div>
+
+                <div class="summary-value">
+                    ${money(sales)}
+                </div>
+
+            </div>
+
+
+            <div class="summary-card">
+
+                <div class="summary-icon">📈</div>
+
+                <div class="summary-title">
+                    Today's Profit
+                </div>
+
+                <div class="summary-value">
+                    ${money(profit)}
+                </div>
+
+            </div>
+
+
+            <div class="summary-card">
+
+                <div class="summary-icon">🧾</div>
+
+                <div class="summary-title">
+                    Transactions
+                </div>
+
+                <div class="summary-value">
+                    ${tx}
+                </div>
+
+            </div>
+
+
+            <div class="summary-card">
+
+                <div class="summary-icon">📦</div>
+
+                <div class="summary-title">
+                    Products
+                </div>
+
+                <div class="summary-value">
+                    ${products.length}
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="section-title">
+            🧾 Today's Transactions
+        </div>
+
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+
+                        <th>ID</th>
+                        <th>Time</th>
+                        <th>Branch</th>
+                        <th>Employee</th>
+                        <th>Total</th>
+                        <th>Profit</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    ${
+                        todayTransactions().map(t=>`
+
+                            <tr>
+
+                                <td>${t.id}</td>
+
+                                <td>
+                                    ${new Date(t.date)
+                                        .toLocaleTimeString()}
+                                </td>
+
+                                <td>${t.branch}</td>
+
+                                <td>${t.employee}</td>
+
+                                <td>${money(t.total)}</td>
+
+                                <td>${money(t.profit)}</td>
+
+                            </tr>
+
+                        `).join("")
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =====================================================
+   EMPLOYEE STOCK
+===================================================== */
+
+function renderEmployeeStock(){
+
+    const list=products.filter(p=>p.stock<=p.min);
+
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="section-title">
+            📦 Stock Information
+        </div>
+
+
+        <div class="card">
+
+            <strong>
+                Branch: ${currentUser.branch}
+            </strong>
+
+            <div class="muted"
+                 style="margin-top:5px;">
+
+                View stock information available to employees.
+
+            </div>
+
+        </div>
+
+
+        <div class="section-title">
+            ⚠️ Low Stock
+        </div>
+
+
+        ${
+            list.length
+            ?
+            list.map(p=>`
+
+                <div class="alert">
+
+                    <strong>
+                        ${p.name}
+                    </strong>
+
+                    <small>
+                        Stock: ${p.stock}
+                        • Minimum: ${p.min}
+                    </small>
+
+                </div>
+
+            `).join("")
+            :
+            `<div class="card">
+                No low-stock products.
+             </div>`
+        }
+
+
+        <div class="section-title">
+            📦 All Products
+        </div>
+
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+
+                    <tr>
+                        <th>Product</th>
+                        <th>SKU</th>
+                        <th>Stock</th>
+                        <th>Status</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    ${
+                        products.map(p=>`
+
+                            <tr>
+
+                                <td>${p.name}</td>
+
+                                <td>${p.sku}</td>
+
+                                <td>${p.stock}</td>
+
+                                <td>
+                                    ${
+                                        p.stock<=p.min
+                                        ?"LOW"
+                                        :"OK"
+                                    }
+                                </td>
+
+                            </tr>
+
+                        `).join("")
+                    }
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    `;
+
+}
+
+
+/* =====================================================
+   EMPLOYEE TRANSACTIONS
+===================================================== */
+
+function renderEmployeeTransactions(){
+
+    const list=transactions.filter(
+        t=>t.employeeId===currentUser.id
+    );
+
+
+    document.getElementById("mainContent").innerHTML=`
+
+        <div class="section-title">
+            🧾 My Transactions
+        </div>
+
+
+        ${
+            list.length
+            ?
+            list.slice().reverse().map(t=>`
+
+                <div class="transaction">
+
+                    <div class="row">
+
+                        <strong>${t.id}</strong>
+
+                        <strong>
+                            ${money(t.total)}
+                        </strong>
+
+                    </div>
+
+                    <div class="muted"
+                         style="margin-top:5px;">
+
+                        ${new Date(t.date).toLocaleString()}
+
+                    </div>
+
+                    <div class="muted"
+                         style="margin-top:5px;">
+
+                        ${t.items.map(i=>
+                            `${i.name} x${i.qty}`
+                        ).join(", ")}
+
+                    </div>
+
+                    <span class="status">
+                        COMPLETED
+                    </span>
+
+                </div>
+
+            `).join("")
+            :
+            `<div class="card">
+                No transactions yet.
+             </div>`
+        }
+
+    `;
+
+}
+
+
+/* =====================================================
+   OWNER PROFILE
+===================================================== */
+
+function openOwnerProfile(){
+
+    closeProfileMenu();
+
+    showModal(
+
+        "👤 Owner Profile",
+
+        `
+
+        <div class="profile-picture">
+            👑
+        </div>
+
+        <div class="info-box">
+            <small>Full Name</small>
+            <strong>${currentUser.name}</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Username</small>
+            <strong>owner</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Role</small>
+            <strong>Owner</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Branch</small>
+            <strong>${currentUser.branch}</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Account ID</small>
+            <strong>${currentUser.id}</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Contact Number</small>
+            <strong>09XXXXXXXXX</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Email</small>
+            <strong>owner@example.com</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Account Status</small>
+            <strong>Active</strong>
+        </div>
+
+        `
+
+    );
+
+}
+
+
+/* =====================================================
+   EMPLOYEE PROFILE
+===================================================== */
+
+function openEmployeeProfile(){
+
+    closeProfileMenu();
+
+    showModal(
+
+        "👤 My Profile",
+
+        `
+
+        <div class="profile-picture">
+            👨‍🔧
+        </div>
+
+        <div class="info-box">
+            <small>Full Name</small>
+            <strong>${currentUser.name}</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Employee ID</small>
+            <strong>${currentUser.id}</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Position</small>
+            <strong>${currentUser.position}</strong>
+        </div>
+
+        <div class="info-box">
+            <small>Branch</small>
+            <strong>${currentUser.branch}</strong>
+        </div>
+
+        `
+
+    );
+
+}
+
+
+/* =====================================================
+   EMPLOYEE SETTINGS
+===================================================== */
+
+function openEmployeeSettings(){
+
+    closeProfileMenu();
+
+    showModal(
+
+        "⚙️ Settings",
+
+        `
+
+        <div class="info-box">
+            <strong>Notification Settings</strong>
+            <small>
+                Employee notifications.
+            </small>
+        </div>
+
+        <div class="info-box">
+            <strong>Display Settings</strong>
+            <small>
+                Dashboard preferences.
+            </small>
+        </div>
+
+        `
+
+    );
+
+}
+
+
+/* =====================================================
+   BRANCHES
+===================================================== */
+
+function openBranches(){
+
+    closeProfileMenu();
+
+    showModal(
+
+        "🏪 Branch Management",
+
+        `
+
+        <div class="info-box">
+            <strong>Main Branch</strong>
+            <small>
+                Active
+            </small>
+        </div>
+
+        <div class="info-box">
+            <strong>Branch 2</strong>
+            <small>
+                Active
+            </small>
+        </div>
+
+        `
+
+    );
+
+}
+
+
+/* =====================================================
+   SECURITY
+===================================================== */
+
+function openSecurity(){
+
+    closeProfileMenu();
+
+    showModal(
+
+        "🔒 Security",
+
+        `
+
+        <div class="info-box">
+            <strong>Owner PIN</strong>
+            <small>
+                Protected
+            </small>
+        </div>
+
+        <div class="info-box">
+            <strong>Owner Functions</strong>
+            <small>
+                Restricted to owner account.
+            </small>
+        </div>
+
+        <div class="info-box">
+            <small>
+                Employee and owner access are separated.
+            </small>
+        </div>
+
+        `
+
+    );
+
+}
+
+
+/* =====================================================
+   CHANGE PASSWORD
+===================================================== */
+
+function changePassword(){
+
+    closeProfileMenu();
+
+    showModal(
+
+        "🔐 Change Password",
+
+        `
+
+        <div class="input-group">
+
+            <label>
+                Current Password / PIN
+            </label>
+
+            <input
+                id="oldPassword"
+                type="password">
+
+        </div>
+
+
+        <div class="input-group">
+
+            <label>
+                New Password
+            </label>
+
+            <input
+                id="newPassword"
+                type="password">
+
+        </div>
+
+
+        <div class="input-group">
+
+            <label>
+                Confirm New Password
+            </label>
+
+            <input
+                id="confirmPassword"
+                type="password">
+
+        </div>
+
+
+        <button
+            class="btn btn-dark"
+            style="width:100%;"
+            onclick="savePassword()">
+
+            CHANGE PASSWORD
+
+        </button>
+
+        `
+
+    );
+
+}
+
+
+async function savePassword(){
+    const oldPassword=document.getElementById("oldPassword").value,newPassword=document.getElementById("newPassword").value,confirmPassword=document.getElementById("confirmPassword").value;
+    if(currentUser.role==="owner"){if(oldPassword!==OWNER_PIN){alert("Incorrect current Owner PIN.");return;}alert("Owner PIN is currently configured in the app code as 1234.");closeModal();return;}
+    const employee=employees.find(e=>e.employeeId===currentUser.id);if(!employee||employee.password!==oldPassword){alert("Incorrect current password.");return;}if(!newPassword){alert("Enter a new password.");return;}if(newPassword!==confirmPassword){alert("New passwords do not match.");return;}
+    
+    employee.password = newPassword;
+    saveLocalData();
+
+    if(navigator.onLine && databaseReady){
+        try { await _supabase.from("employees").update({password: newPassword}).eq("id", employee.id); } catch(e){}
+    }
+
+    alert("Password changed successfully.");
+    closeModal();
+}
+
+
+/* =====================================================
+   LOGOUT
+===================================================== */
+
+function logout(){
+    closeProfileMenu();
+    closeModal();
+    if(!confirm("Are you sure you want to log out?")) return;
+    
+    sessionStorage.removeItem("motorShopUser");
+    
+    currentUser=null;
+    card=[];
+    loginRole="owner";
+    document.getElementById("app").classList.remove("show");
+    document.getElementById("loginScreen").style.display="flex";
+    document.getElementById("loginName").value="";
+    document.getElementById("loginPassword").value="";
+    document.getElementById("loginBranch").value="Main Branch";
+    document.getElementById("mainContent").innerHTML="";
+    document.getElementById("bottomNav").innerHTML="";
+    selectLoginRole("owner");
+}
+
+
+/* =====================================================
+   MODAL
+===================================================== */
+
+function showModal(title,content){
+
+    document.getElementById("modalTitle")
+        .textContent=title;
+
+    document.getElementById("modalContent")
+        .innerHTML=content;
+
+    document.getElementById("modalBg")
+        .classList.add("show");
+
+}
+
+
+function closeModal(){
+    stopLiveCameraScanner();
+    document.getElementById("modalBg")
+        .classList.remove("show");
+
+}
+
+
+function closeProfileMenu(){
+
+    document.getElementById("profileMenu")
+        .classList.remove("show");
+
+}
+
+
+/* =====================================================
+   START
+===================================================== */
+
+selectLoginRole("owner");
+
+dbReady.then(()=>{const el=document.getElementById("dbStatusText");if(el)el.textContent=dbStatus();});
+
+</script>
+
+<script>
+\n/* =====================================================\n   LOW STOCK NOTIFICATION\n===================================================== */\nlet lastLowStockSignature = "";\nlet stockNotificationTimer = null;\n\nfunction getLowStockItemsForNotification(){\n    try {\n        return typeof lowStockProducts === "function" ? lowStockProducts() : (Array.isArray(products) ? products.filter(p => Number(p.stock) <= Number(p.min)) : []);\n    } catch(e){\n        return [];\n    }\n}\n\nfunction showStockNotification(items){\n    const box=document.getElementById("stockNotification");\n    const text=document.getElementById("stockNotificationText");\n    if(!box || !text) return;\n    const count=items.length;\n    const names=items.slice(0,3).map(p=>p.name).join(", ");\n    text.textContent = count === 1 ? `${names} is low on stock.` : `${count} items are low on stock${names ? `: ${names}${count>3 ? "…" : ""}` : "."}`;\n    box.classList.add("show");\n    clearTimeout(stockNotificationTimer);\n    stockNotificationTimer=setTimeout(()=>box.classList.remove("show"),10000);\n}\n\nfunction hideStockNotification(){\n    const box=document.getElementById("stockNotification");\n    if(box) box.classList.remove("show");\n}\n\nasync function checkLowStockNotification(force=false){\n    const items=getLowStockItemsForNotification();\n    const signature=items.map(p=>`${p.id||p.sku}:${p.stock}:${p.min}`).sort().join("|");\n    if(!items.length){ lastLowStockSignature=""; hideStockNotification(); return; }\n    if(!force && signature===lastLowStockSignature) return;\n    lastLowStockSignature=signature;\n    showStockNotification(items);\n    if("Notification" in window){\n        try {\n            if(Notification.permission === "granted") new Notification("Motor Shop — Low Stock", {body:`${items.length} item(s) need restocking.`});\n        } catch(e){}\n    }\n}\n\nfunction requestLowStockNotifications(){\n    if("Notification" in window && Notification.permission === "default") Notification.requestPermission().catch(()=>{});\n}\n
+</script>
+\n<script>\nwindow.addEventListener("load",()=>{\n    requestLowStockNotifications();\n    setTimeout(()=>checkLowStockNotification(true),1200);\n    setInterval(()=>checkLowStockNotification(false),30000);\n});\n</script>\n</body>
+</html>
