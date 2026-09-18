@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Motor Shop Management System V4.5 • Live Scanner + Low Stock Notifications</title>
+<title>Motor Shop Management System V4.7 FINAL • Supabase Employee Login + Cash Control</title>
 <style>
 *{
     box-sizing:border-box;
@@ -778,6 +778,16 @@ th{
 .stock-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#dc2626;color:#fff;font-size:11px;font-weight:bold;margin-left:5px}
 
 </style>
+<meta name="motor-shop-version" content="4.9-final-updates"><!-- FINAL UPDATES -->
+<style id="v49-final-fix">
+/* Finalized UI cleanup */
+#targetStock,#target,#addItemTargetStock,
+label[for="targetStock"],label[for="target"],[data-field="target-stock"]{
+  display:none !important;
+}
+.restock-suggestion{transition:transform .12s ease,box-shadow .12s ease}
+.restock-suggestion:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.10)}
+</style>
 </head>
 <body>
 <div class="stock-notification" id="stockNotification">
@@ -795,7 +805,7 @@ th{
         </div>
 <h1>Motor Shop</h1>
 <div class="login-subtitle">
-            Management System V4.6 • Live Scanner + Low Stock Notifications
+            Management System V4.7 FINAL • Supabase Employee Login + Cash Control
         </div>
 <div class="form-group">
 <label>Username / Employee ID</label>
@@ -924,7 +934,22 @@ function normalizeProduct(row){
     }; 
 }
 function normalizeTransaction(row){ let items=row.items; if(typeof items==="string"){try{items=JSON.parse(items)}catch{items=[]}} return {id:row.id,date:row.date||row.created_at||new Date().toISOString(),branch:row.branch||"",employee:row.employee||"",employeeId:row.employee_id ?? row.employeeId ?? "",items:Array.isArray(items)?items:[],total:Number(row.total||0),profit:Number(row.profit||0)}; }
-function normalizeEmployee(row){ return {id:row.id,name:row.name||"",employeeId:row.employee_id ?? row.employeeId ?? "",branch:row.branch||"Main Branch",position:row.position||"Employee",status:row.status||"Active",password:row.password||""}; }
+function normalizeEmployee(row){ return {
+    id:row.id,
+    name:row.name||"",
+    username:row.username||"",
+    employeeId:row.employee_id ?? row.employeeId ?? "",
+    branch:row.branch||"Main Branch",
+    position:row.position||"Employee",
+    status:row.status||"Active",
+    password:row.password||"",
+    mustChangePassword:!!row.must_change_password||!!row.mustChangePassword,
+    contact:row.contact_number||row.contact||row.contactNumber||"",
+    dateHired:row.date_hired||row.dateHired||"",
+    notes:row.notes||"",
+    deactivatedAt:row.deactivated_at||row.deactivatedAt||null,
+    deactivationReason:row.deactivation_reason||row.deactivationReason||""
+}; }
 function normalizeSupplier(row){ return {id:row.id,name:row.name||"",contact:row.contact||""}; }
 function normalizeCash(row){ return {id:row.id,date:row.date||row.created_at||new Date().toISOString(),branch:row.branch||"",amount:Number(row.amount||0),collectedBy:row.collected_by ?? row.collectedBy ?? "",purpose:row.purpose||""}; }
 function normalizeAudit(row){ let items=row.products ?? row.items ?? []; if(typeof items==="string"){try{items=JSON.parse(items)}catch{items=[]}} return {id:row.id,date:row.date||row.created_at||new Date().toISOString(),branch:row.branch||"",employee:row.employee||"",employeeId:row.employee_id ?? row.employeeId ?? "",products:Array.isArray(items)?items:[]}; }
@@ -1000,9 +1025,13 @@ function dbStatus(){
     return "🟢 Online database connected" + (pending ? " • " + pending + " pending" : "");
 }
 function mergePendingLocalData(){
-    // Never let a failed offline action disappear just because a fresh server pull ran.
+    // Never let a failed/offline sale disappear just because a fresh server pull ran.
     const q = getOfflineQueue();
     const txPending = q.filter(a=>a.type==="process_sale").map(a=>normalizeTransaction(a.data));
+
+    // Also preserve any locally known sale that is not currently returned by
+    // Supabase. This is intentional: sales are audit records and must not be
+    // silently deleted from the browser because of a temporary/incomplete read.
     const productPending = q.filter(a=>a.type==="insert_product").map(a=>normalizeProduct(a.data));
     const cashPending = q.filter(a=>a.type==="insert_cash").map(a=>normalizeCash(a.data));
 
@@ -1033,6 +1062,8 @@ async function processOfflineQueue(){
                 result = await _supabase.from("products").upsert(action.data, {onConflict:"id", ignoreDuplicates:true});
             } else if(action.type === "process_sale"){
                 result = await _supabase.rpc("process_sale", {p_transaction: action.data});
+                // A successful RPC is enough to remove the queue item; the
+                // transaction itself remains in the local history as an audit record.
             } else if(action.type === "insert_cash"){
                 result = await _supabase.from("cash_collections").upsert(action.data, {onConflict:"id", ignoreDuplicates:true});
             } else if(action.type === "update_product_stock"){
@@ -1082,7 +1113,20 @@ async function syncAllFromSupabase(initial=false){
         if(errors.length) throw new Error(errors.map(x=>x.error.message).join(" | "));
 
         if(p.data) products=p.data.length?p.data.map(normalizeProduct):products;
-        if(t.data) transactions=t.data.map(normalizeTransaction);
+        // SALES SAFETY: never replace the browser's complete sales history with
+        // an empty/partial Supabase response. Merge by transaction ID instead.
+        // This protects yesterday's sales when RLS, connection, or a temporary
+        // Supabase read issue returns no rows or only part of the history.
+        if(Array.isArray(t.data)){
+            const serverTx = t.data.map(normalizeTransaction);
+            const byId = new Map();
+            [...transactions, ...serverTx].forEach(row=>{
+                if(row && row.id!=null) byId.set(String(row.id), row);
+            });
+            transactions = Array.from(byId.values()).sort(
+                (a,b)=>new Date(b.date||0)-new Date(a.date||0)
+            );
+        }
         if(e.data) employees=e.data.length?e.data.map(normalizeEmployee):employees;
         if(e.data){ const ownerRow=e.data.find(row=>String(row.employee_id||row.employeeId||"").toUpperCase()==="OWNER-001" && String(row.status||"Active")==="Active"); if(ownerRow && ownerRow.password){ ownerCredentials={username:ownerRow.name||ownerCredentials.username,password:String(ownerRow.password)}; localStorage.setItem("motorShop_ownerCredentials",JSON.stringify(ownerCredentials)); } }
         if(sup.data) suppliers=sup.data.length?sup.data.map(normalizeSupplier):suppliers;
@@ -1606,7 +1650,9 @@ function setBottomNav(items){
         items.map((item,index)=>`
 
             <div class="nav ${index===0?'active':''}"
-                 onclick="${item.action}">
+                 role="button" tabindex="0" title="Open ${item.name}"
+                 onclick="${item.action}"
+                 onkeydown="if(event.key==='Enter'||event.key===' ') { ${item.action}; event.preventDefault(); }">
 
                 <span class="nav-icon">
                     ${item.icon}
@@ -1698,7 +1744,7 @@ function renderOwnerDashboard(){
         </div>
 
 
-        <div class="sales-card">
+        <div class="sales-card" role="button" tabindex="0" style="cursor:pointer" onclick="showSection('sales')" onkeydown="if(event.key==='Enter'||event.key===' ')showSection('sales')">
 
             <div class="sales-label">
                 💰 Today's Total Sales
@@ -1840,6 +1886,14 @@ function renderOwnerDashboard(){
                  onclick="showSection('cash')">
                 <div class="quick-icon">💵</div>
                 <span>Collect Cash</span>
+            </div>
+
+            <div class="quick"
+                 role="button" tabindex="0"
+                 onclick="openSalesSafe()"
+                 onkeydown="if(event.key==='Enter'||event.key===' ') { openSalesSafe(); event.preventDefault(); }">
+                <div class="quick-icon">💰</div>
+                <span>Sales</span>
             </div>
 
             <div class="quick"
@@ -3597,17 +3651,71 @@ async function performRestock(){
    SALES
 ===================================================== */
 
+// Global HTML escape helper used by the Sales page.
+// The later employee patch has its own scoped `esc()` helper,
+// so renderSales() needs a global version here.
+function esc(v){
+    return String(v ?? "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;");
+}
+
 function renderSales(){
 
-    const list=
-        currentUser.role==="owner"
-        ?
-        todayTransactions()
-        :
-        todayTransactions().filter(
-            t=>t.employeeId===currentUser.id
-        );
+    // Sales History filters
+    const params = window._salesFilters || {};
+    const txData = Array.isArray(transactions) ? transactions : [];
+    const employeeData = Array.isArray(employees) ? employees : [];
+    const collectionData = Array.isArray(cashCollections) ? cashCollections : [];
+    const selectedDate = params.date || new Date().toISOString().slice(0,10);
+    const allBranches = Array.from(new Set([
+        "Main Branch",
+        "Branch 2",
+        ...employeeData.map(e=>e.branch).filter(Boolean),
+        ...txData.map(t=>t.branch).filter(Boolean)
+    ]));
 
+    const selectedBranch = params.branch || "ALL";
+
+    function sameSelectedDate(dateValue){
+        if(!dateValue) return false;
+        const d = new Date(dateValue);
+        if(Number.isNaN(d.getTime())) return false;
+        const y = d.getFullYear();
+        const m = String(d.getMonth()+1).padStart(2,"0");
+        const day = String(d.getDate()).padStart(2,"0");
+        return `${y}-${m}-${day}`===selectedDate;
+    }
+
+    let list = txData.filter(t=>sameSelectedDate(t.date));
+
+    if(currentUser.role==="employee"){
+        list = list.filter(t=>String(t.employeeId)===String(currentUser.id));
+    }
+
+    if(selectedBranch!=="ALL"){
+        list = list.filter(t=>String(t.branch)===String(selectedBranch));
+    }
+
+    const gross = list.reduce((s,t)=>s+Number(t.subtotal ?? t.total ?? 0),0);
+    const discounts = list.reduce((s,t)=>s+Number(t.discount ?? 0),0);
+    const net = list.reduce((s,t)=>s+Number(t.total ?? 0),0);
+
+    let collections = collectionData.filter(c=>sameSelectedDate(c.date));
+    if(selectedBranch!=="ALL"){
+        collections = collections.filter(c=>String(c.branch)===String(selectedBranch));
+    }
+    const cashCollected = collections.reduce((s,c)=>s+Number(c.amount||0),0);
+    const remaining = net-cashCollected;
+
+    const branchOptions = currentUser.role==="employee"
+        ? [currentUser.branch||"Main Branch"]
+        : allBranches;
+
+    const safeDate = String(selectedDate).replace(/"/g,"&quot;");
+    const safeBranch = String(selectedBranch).replace(/"/g,"&quot;");
 
     document.getElementById("mainContent").innerHTML=`
 
@@ -3615,57 +3723,136 @@ function renderSales(){
             💰 Sales
         </div>
 
-
-        <div class="sales-card">
-
-            <div class="sales-label">
-                Today's Sales
+        <div class="card">
+            <div class="section-title" style="margin-bottom:10px;">
+                🔎 Sales History Filter
             </div>
 
-            <div class="sales-amount">
+            <div style="display:grid;grid-template-columns:1fr;gap:10px;">
 
-                ${money(
-                    list.reduce(
-                        (s,t)=>s+t.total,0
-                    )
-                )}
+                <div>
+                    <label class="sales-label">Select Date</label>
+                    <input
+                        type="date"
+                        id="salesDateFilter"
+                        value="${safeDate}"
+                        style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;"
+                        onchange="window.setSalesFilter('date',this.value)"
+                    >
+                </div>
+
+                <div>
+                    <label class="sales-label">Branch</label>
+                    <select
+                        id="salesBranchFilter"
+                        style="width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;"
+                        onchange="window.setSalesFilter('branch',this.value)"
+                    >
+                        ${
+                            currentUser.role==="owner"
+                            ? `<option value="ALL" ${selectedBranch==="ALL"?"selected":""}>All Branches</option>`
+                            : ""
+                        }
+                        ${branchOptions.map(b=>`
+                            <option value="${esc(b)}" ${selectedBranch===b?"selected":""}>
+                                ${esc(b)}
+                            </option>
+                        `).join("")}
+                    </select>
+                </div>
 
             </div>
 
+            <div class="muted" style="margin-top:8px;">
+                Showing sales for <strong>${new Date(selectedDate+"T00:00:00").toLocaleDateString()}</strong>
+                ${selectedBranch==="ALL" ? "• All Branches" : "• "+esc(selectedBranch)}
+            </div>
         </div>
 
+        <div class="section-title">
+            📊 Sales Summary
+        </div>
+
+        <div class="card">
+            <div class="row" style="padding:7px 0;">
+                <span class="muted">Gross Sales</span>
+                <strong>${money(gross)}</strong>
+            </div>
+
+            <div class="row" style="padding:7px 0;">
+                <span class="muted">Discounts</span>
+                <strong>${money(discounts)}</strong>
+            </div>
+
+            <div class="row" style="padding:7px 0;">
+                <span class="muted">Net Sales</span>
+                <strong>${money(net)}</strong>
+            </div>
+
+            <div class="row" style="padding:7px 0;">
+                <span class="muted">Transactions</span>
+                <strong>${list.length}</strong>
+            </div>
+
+            <div class="row" style="padding:7px 0;">
+                <span class="muted">Cash Collected</span>
+                <strong>${money(cashCollected)}</strong>
+            </div>
+
+            <div class="row" style="padding:7px 0;">
+                <span class="muted">Remaining / (Over)</span>
+                <strong>${money(remaining)}</strong>
+            </div>
+
+            <div style="margin-top:8px;font-weight:700;">
+                ${
+                    remaining<0
+                    ? "🔴 OVER-COLLECTED"
+                    : remaining===0
+                    ? "🟢 CLEARED"
+                    : "🟠 PENDING COLLECTION"
+                }
+            </div>
+        </div>
+
+        <div class="section-title">
+            🧾 Sales Details
+        </div>
 
         ${
             list.length
             ?
-            list.slice().reverse().map(t=>`
+            list.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>`
 
                 <div class="transaction">
 
                     <div class="row">
-
-                        <strong>${t.id}</strong>
-
+                        <strong>${esc(t.id)}</strong>
                         <strong>${money(t.total)}</strong>
-
                     </div>
 
-                    <div class="muted"
-                         style="margin-top:5px;">
-
-                        ${t.branch}
-                        •
-                        ${t.employee}
-
+                    <div class="muted" style="margin-top:5px;">
+                        ${new Date(t.date).toLocaleString()}
                     </div>
 
-                    <div class="muted"
-                         style="margin-top:4px;">
+                    <div class="muted" style="margin-top:5px;">
+                        🏪 ${esc(t.branch||"")} • 👤 ${esc(t.employee||"")}
+                    </div>
 
-                        ${t.items.map(i=>
-                            `${i.name} x${i.qty}`
+                    <div class="muted" style="margin-top:4px;">
+                        ${(Array.isArray(t.items)?t.items:[]).map(i=>
+                            `${esc(i.name)} x${Number(i.qty||0)}`
                         ).join(", ")}
+                    </div>
 
+                    <div style="margin-top:6px;">
+                        Subtotal: <strong>${money(t.subtotal ?? t.total)}</strong>
+                        • Discount: <strong>${money(t.discount||0)}</strong>
+                    </div>
+
+                    <div style="margin-top:4px;">
+                        Payment: <strong>${money(t.payment||0)}</strong>
+                        • Change: <strong>${money(t.change||0)}</strong>
                     </div>
 
                     <span class="status">
@@ -3677,13 +3864,18 @@ function renderSales(){
             `).join("")
             :
             `<div class="card">
-                No sales found.
+                No sales found for the selected date${selectedBranch==="ALL"?"":" and branch"}.
              </div>`
         }
 
     `;
-
 }
+
+window.setSalesFilter=function(key,value){
+    window._salesFilters = window._salesFilters || {};
+    window._salesFilters[key]=value;
+    renderSales();
+};
 
 
 /* =====================================================
@@ -3691,213 +3883,181 @@ function renderSales(){
 ===================================================== */
 
 function renderCash(){
+    const branches = ["Main Branch","Branch 2"];
+    const branch = document.getElementById("collectionBranch")?.value || branches[0];
 
-    const sales=totalTodaySales();
-    const collected=totalTodayCollected();
+    function branchCashSales(b){
+        return todayTransactions()
+            .filter(t=>t.branch===b)
+            .reduce((sum,t)=>sum+Number(t.total||0),0);
+    }
+    function branchCashCollected(b){
+        return cashCollections
+            .filter(c=>isToday(c.date) && c.branch===b)
+            .reduce((sum,c)=>sum+Number(c.amount||0),0);
+    }
+    function branchCashRemaining(b){
+        // Intentionally NOT clamped: a negative value shows over-collection.
+        return branchCashSales(b)-branchCashCollected(b);
+    }
+
+    const sales = branchCashSales(branch);
+    const collected = branchCashCollected(branch);
+    const remaining = branchCashRemaining(branch);
+    const branchEmployees = employees.filter(e=>e.branch===branch && e.status==="Active");
 
     document.getElementById("mainContent").innerHTML=`
+        <div class="section-title">💵 Cash Collection</div>
 
-        <div class="section-title">
-            💵 Cash Collection
-        </div>
-
-
-        <div class="summary-grid">
-
-            <div class="summary-card">
-
-                <div class="summary-icon">💰</div>
-
-                <div class="summary-title">
-                    Today's Sales
+        <div class="card">
+            <div class="muted">Daily cash control • ${branch}</div>
+            <div class="summary-grid" style="margin-top:10px;">
+                <div class="summary-card">
+                    <div class="summary-title">Branch Sales Today</div>
+                    <div class="summary-value">${money(sales)}</div>
                 </div>
-
-                <div class="summary-value">
-                    ${money(sales)}
+                <div class="summary-card">
+                    <div class="summary-title">Cash Collected</div>
+                    <div class="summary-value">${money(collected)}</div>
                 </div>
-
+                <div class="summary-card">
+                    <div class="summary-title">Remaining / (Over)</div>
+                    <div class="summary-value">${money(remaining)}</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-title">Status</div>
+                    <div class="summary-value">${remaining<0?"OVER-COLLECTED":remaining===0?"CLEARED":"PENDING"}</div>
+                </div>
             </div>
-
-
-            <div class="summary-card">
-
-                <div class="summary-icon">💵</div>
-
-                <div class="summary-title">
-                    Collected
-                </div>
-
-                <div class="summary-value">
-                    ${money(collected)}
-                </div>
-
-            </div>
-
         </div>
 
+        <div class="section-title">📋 Employee Cash Summary</div>
+        ${branchEmployees.length ? branchEmployees.map(e=>{
+            const esales = employeeSales(e.employeeId);
+            const ecash = cashCollections.filter(c=>isToday(c.date) && c.branch===branch &&
+                String(c.purpose||"").includes("[EMP:"+String(e.employeeId)+"]"))
+                .reduce((sum,c)=>sum+Number(c.amount||0),0);
+            const eleft = esales-ecash;
+            return `<div class="card">
+                <div class="row">
+                    <strong>${esc(e.name)}</strong>
+                    <strong>${money(eleft)}</strong>
+                </div>
+                <div class="muted">Sales: ${money(esales)} • Recorded collections: ${money(ecash)}</div>
+                <div class="muted">${eleft<0?"Over-collected":eleft===0?"Cleared":"Cash still to collect"}</div>
+            </div>`;
+        }).join("") : `<div class="card">No active employees assigned to this branch.</div>`}
 
-        <div class="section-title">
-            ➕ Record Collection
-        </div>
-
-
+        <div class="section-title">➕ Record Owner Collection</div>
         <div class="form-card">
-
             <div class="input-group">
-
-                <label>
-                    Branch
-                </label>
-
-                <select id="collectionBranch">
-
-                    <option>Main Branch</option>
-                    <option>Branch 2</option>
-
+                <label>Branch</label>
+                <select id="collectionBranch" onchange="renderCash()">
+                    ${branches.map(b=>`<option ${b===branch?"selected":""}>${b}</option>`).join("")}
                 </select>
-
             </div>
-
-
             <div class="input-group">
-
-                <label>
-                    Amount Collected
-                </label>
-
-                <input
-                    id="collectionAmount"
-                    type="number"
-                    placeholder="₱0.00">
-
+                <label>Collected From Employee</label>
+                <select id="collectionEmployee">
+                    <option value="">Branch-level / multiple employees</option>
+                    ${branchEmployees.map(e=>`<option value="${esc(e.employeeId)}">${esc(e.name)} • ${esc(e.employeeId)}</option>`).join("")}
+                </select>
             </div>
-
-
             <div class="input-group">
-
-                <label>
-                    Purpose / Note
-                </label>
-
-                <input
-                    id="collectionPurpose"
-                    value="Branch cash collection"
-                    placeholder="Purpose">
-
+                <label>Amount Collected</label>
+                <input id="collectionAmount" type="number" min="0.01" step="0.01" placeholder="₱0.00">
             </div>
-
-
             <div class="input-group">
-
-                <label>
-                    Owner PIN
-                </label>
-
-                <input
-                    id="collectionPin"
-                    type="password"
-                    placeholder="Enter Owner PIN">
-
+                <label>Purpose / Note</label>
+                <input id="collectionPurpose" value="Branch cash collection" placeholder="Purpose">
             </div>
-
-
-            <button
-                class="btn btn-green"
-                style="width:100%;"
-                onclick="recordCashCollection()">
-
+            <div class="input-group">
+                <label>Owner PIN</label>
+                <input id="collectionPin" type="password" placeholder="Enter Owner PIN">
+            </div>
+            <button class="btn btn-green" style="width:100%;" onclick="recordCashCollection()">
                 RECORD CASH COLLECTION
-
             </button>
-
         </div>
 
-
-        <div class="section-title">
-            📋 Collection History
-        </div>
-
-
-        ${
-            cashCollections.length
-            ?
-            cashCollections.slice().reverse().map(c=>`
-
-                <div class="card">
-
-                    <div class="row">
-
-                        <strong>
-                            ${c.branch}
-                        </strong>
-
-                        <strong>
-                            ${money(c.amount)}
-                        </strong>
-
-                    </div>
-
-                    <div class="muted">
-                        ${new Date(c.date).toLocaleString()}
-                        • ${c.collectedBy}
-                    </div>
-
-                    <div class="muted">
-                        ${c.purpose}
-                    </div>
-
+        <div class="section-title">📋 Collection History</div>
+        ${cashCollections.length ? cashCollections.slice().reverse().map(c=>`
+            <div class="card">
+                <div class="row">
+                    <strong>${esc(c.branch)}</strong>
+                    <strong>${money(c.amount)}</strong>
                 </div>
-
-            `).join("")
-            :
-            `<div class="card">
-                No cash collections recorded yet.
-             </div>`
-        }
-
+                <div class="muted">${new Date(c.date).toLocaleString()} • Recorded by ${esc(c.collectedBy)}</div>
+                <div class="muted">${esc(c.purpose)}</div>
+            </div>
+        `).join("") : `<div class="card">No cash collections recorded yet.</div>`}
     `;
-
 }
 
-
 async function recordCashCollection(){
-    const branch=document.getElementById("collectionBranch").value,amount=Number(document.getElementById("collectionAmount").value),purpose=document.getElementById("collectionPurpose").value,pin=document.getElementById("collectionPin").value;
-    if(!amount||amount<=0){alert("Enter a valid amount.");return;}if(pin!==ownerCredentials.password){alert("❌ Incorrect Owner PIN.\n\nCash collection was NOT recorded.");return;}
-    
-    const cashObj = {
-        id: Date.now(),
-        date: new Date().toISOString(),
+    if(currentUser?.role!=="owner"){
+        alert("Only the Owner can record a cash collection.");
+        return;
+    }
+
+    const branch=document.getElementById("collectionBranch")?.value||"Main Branch";
+    const employeeId=document.getElementById("collectionEmployee")?.value||"";
+    const amount=Number(document.getElementById("collectionAmount")?.value);
+    const note=(document.getElementById("collectionPurpose")?.value||"Branch cash collection").trim();
+    const pin=document.getElementById("collectionPin")?.value||"";
+
+    if(!Number.isFinite(amount)||amount<=0){alert("Enter a valid amount.");return;}
+    if(pin!==String(ownerCredentials.password)){alert("❌ Incorrect Owner PIN.\n\nCash collection was NOT recorded.");return;}
+
+    const employee=employees.find(e=>String(e.employeeId)===String(employeeId));
+    const employeeTag=employee ? ` [EMP:${employee.employeeId}] ${employee.name}` : " [EMP:BRANCH]";
+
+    const cashObj={
+        id:Date.now(),
+        date:new Date().toISOString(),
         branch,
         amount,
-        collectedBy: currentUser.name,
-        purpose
+        collectedBy:currentUser.name,
+        purpose:note+employeeTag
     };
 
     cashCollections.unshift(normalizeCash(cashObj));
     saveLocalData();
 
+    let synced=false;
     if(navigator.onLine && databaseReady){
-        try {
+        try{
             const {error}=await _supabase.from("cash_collections").upsert({
-                id: cashObj.id,
-                date: cashObj.date,
-                branch: cashObj.branch,
-                amount: cashObj.amount,
-                collected_by: cashObj.collectedBy,
-                purpose: cashObj.purpose
+                id:cashObj.id,
+                date:cashObj.date,
+                branch:cashObj.branch,
+                amount:cashObj.amount,
+                collected_by:cashObj.collectedBy,
+                purpose:cashObj.purpose
             },{onConflict:"id",ignoreDuplicates:true});
             if(error) throw error;
-        } catch(e){
+            synced=true;
+        }catch(e){
             enqueueOffline("insert_cash",cashObj);
         }
-    } else {
+    }else{
         enqueueOffline("insert_cash",cashObj);
     }
 
-    alert("✅ CASH COLLECTION RECORDED (Synced)\n\nBranch: "+branch+"\nAmount: "+money(amount));
+    const branchSales=todayTransactions().filter(t=>t.branch===branch).reduce((a,t)=>a+Number(t.total||0),0);
+    const branchCollected=cashCollections.filter(c=>isToday(c.date)&&c.branch===branch).reduce((a,c)=>a+Number(c.amount||0),0);
+    const remaining=branchSales-branchCollected;
+
+    alert(
+        "✅ CASH COLLECTION RECORDED\n\n"+
+        "Branch: "+branch+"\n"+
+        (employee ? "Collected From: "+employee.name+"\n" : "")+
+        "Amount: "+money(amount)+"\n"+
+        "Remaining / (Over): "+money(remaining)+
+        (synced ? "\nStatus: Synced" : "\nStatus: Saved locally / queued for sync")
+    );
     showSection("cash");
 }
-
 
 /* =====================================================
    EMPLOYEES
@@ -4983,6 +5143,17 @@ function openSecurity(){
 
 function changePassword(){
     closeProfileMenu();
+    if(currentUser?.role==="employee"){
+        const e=employees.find(x=>String(x.employeeId)===String(currentUser.id));
+        if(!e) return;
+        showModal("🔐 Change Employee Password",`
+            <div class="input-group"><label>Current Password</label><input id="empOldPassword" type="password"></div>
+            <div class="input-group"><label>New Password</label><input id="empNewPassword" type="password"></div>
+            <div class="input-group"><label>Confirm New Password</label><input id="empConfirmPassword" type="password"></div>
+            <button class="btn btn-dark" style="width:100%" onclick="saveEmployeeOwnPassword()">SAVE PASSWORD</button>
+        `);
+        return;
+    }
     if(currentUser?.role!=="owner") return;
     showModal("🔐 Owner Account", `
         <div class="input-group"><label>Current Password</label><input id="oldPassword" type="password"></div>
@@ -4991,6 +5162,37 @@ function changePassword(){
         <div class="input-group"><label>Confirm New Password</label><input id="confirmPassword" type="password"></div>
         <button class="btn btn-dark" style="width:100%;" onclick="savePassword()">SAVE OWNER ACCOUNT</button>
     `);
+}
+
+async function saveEmployeeOwnPassword(){
+    if(currentUser?.role!=="employee") return;
+    const e=employees.find(x=>String(x.employeeId)===String(currentUser.id));
+    if(!e) return;
+
+    const oldP=document.getElementById("empOldPassword")?.value||"";
+    const newP=document.getElementById("empNewPassword")?.value||"";
+    const confirm=document.getElementById("empConfirmPassword")?.value||"";
+
+    if(oldP!==String(e.password||"")){alert("Incorrect current password.");return;}
+    if(newP.length<6){alert("New password must be at least 6 characters.");return;}
+    if(newP!==confirm){alert("New passwords do not match.");return;}
+    if(!navigator.onLine){alert("Internet connection is required to save the new password to Supabase.");return;}
+
+    try{
+        const {data,error}=await _supabase.from("employees")
+            .update({password:newP})
+            .eq("employee_id",e.employeeId)
+            .select("employee_id,password,status")
+            .single();
+        if(error) throw error;
+        if(!data || String(data.password)!==newP) throw new Error("Supabase did not confirm the new password.");
+        e.password=newP;
+        saveLocalData();
+        closeModal();
+        alert("Employee password updated successfully.");
+    }catch(err){
+        alert("Password was NOT saved to Supabase.\n\nDatabase error: "+(err?.message||err));
+    }
 }
 
 async function savePassword(){
@@ -5235,7 +5437,7 @@ window.addEventListener("load",()=>{
     employees=(employees||[]).map(e=>({
       id:e.id||Date.now()+Math.random(), name:e.name||'', employeeId:e.employeeId||e.employee_id||'',
       branch:e.branch||'Main Branch', position:e.position||'Employee', status:e.status||'Active',
-      password:e.password||'', mustChangePassword:!!e.mustChangePassword, contact:e.contact||e.contactNumber||'',
+      password:e.password||'', mustChangePassword:!!e.mustChangePassword, username:e.username||'', contact:e.contact||e.contactNumber||'',
       dateHired:e.dateHired||e.date_hired||'', notes:e.notes||'', deactivatedAt:e.deactivatedAt||e.dateDeactivated||null,
       deactivationReason:e.deactivationReason||e.reason||''
     }));
@@ -5279,6 +5481,7 @@ window.addEventListener("load",()=>{
     if(employeeId.toUpperCase()==='OWNER-001'){alert('Employee ID OWNER-001 is reserved for the Owner account.');return}
     if(employees.some(e=>String(e.employeeId||'').toLowerCase()===employeeId.toLowerCase())){alert('Employee ID already exists.');return}
     if(employees.some(e=>String(e.username||e.name||'').trim().toLowerCase()===username.toLowerCase())){alert('Username already exists. Please choose a different username.');return}
+    if(employees.some(e=>String(e.name||'').trim().toLowerCase()===username.toLowerCase())){alert('Username conflicts with an existing employee name. Please choose a different username.');return}
     if(!navigator.onLine){alert('Internet connection is required to create an employee because the username must be checked against Supabase.');return}
     try{
       // Database check prevents duplicate usernames even when local data is stale.
@@ -5484,9 +5687,755 @@ window.addEventListener("load",()=>{
 
   window.showReceipt=function(tx){showModal('🧾 Receipt Preview',`<div class="card" id="receiptBox"><strong>MOTOR SHOP</strong><hr><div>Transaction: ${esc(tx.id)}</div><div>Date: ${new Date(tx.date).toLocaleString()}</div><div>Customer: ${esc(tx.customerName||'Walk-in')}</div><hr>${tx.items.map(i=>`<div class="row"><span>${esc(i.name)} × ${i.qty}</span><strong>${money(i.price*i.qty)}</strong></div>`).join('')}<hr><div class="row"><strong>Subtotal</strong><strong>${money(tx.subtotal)}</strong></div><div class="row"><strong>Discount</strong><strong>${money(tx.discount)}</strong></div><div class="row"><strong>TOTAL</strong><strong>${money(tx.total)}</strong></div><div class="row"><span>Payment</span><strong>${money(tx.payment)}</strong></div><div class="row"><span>Change</span><strong>${money(tx.change)}</strong></div></div><button class="btn btn-dark" style="width:100%" onclick="window.print()">🖨️ PRINT RECEIPT</button>`)};
 
-  window.showSection=function(section){if(!currentUser)return;stopLiveCameraScanner();document.getElementById('profileMenu')?.classList.remove('show');if(currentUser.role==='owner'){if(section==='dashboard')renderDashboard();if(section==='inventory')renderInventory();if(section==='addItem')renderAddItem();if(section==='restock')renderRestock();if(section==='sales')renderSales();if(section==='cash')renderCash();if(section==='employees')renderEmployees();if(section==='suppliers')renderSuppliers();if(section==='audit')renderAudits();if(section==='reports')renderReports()}else{if(section==='dashboard')renderDashboard();if(section==='pos')renderPOS();if(section==='stock')renderEmployeeStock();if(section==='transactions')renderEmployeeTransactions()}};
+  window.openSalesSafe=function(){
+    if(!currentUser){ alert('Please log in first.'); return; }
+    if(currentUser.role!=='owner'){
+      if(typeof renderEmployeeTransactions==='function') renderEmployeeTransactions();
+      return;
+    }
+    try{
+      if(typeof stopLiveCameraScanner==='function') stopLiveCameraScanner();
+      const menu=document.getElementById('profileMenu');
+      if(menu) menu.classList.remove('show');
+      if(typeof renderSales!=='function'){
+        alert('Sales module is not loaded. Please reopen the updated Motor Shop file.');
+        return;
+      }
+      renderSales();
+    }catch(err){
+      console.error('Sales page error:',err);
+      const main=document.getElementById('mainContent');
+      if(main){
+        main.innerHTML='<div class="section-title">💰 Sales</div><div class="card"><strong>Sales is temporarily unavailable.</strong><div class="muted" style="margin-top:8px">Please try opening Sales again. Your sales data has not been deleted.</div><button class="btn btn-dark" style="margin-top:12px" onclick="window.openSalesSafe()">OPEN SALES AGAIN</button></div>';
+      }else{
+        alert('Sales could not be opened. Please reopen the updated Motor Shop file.');
+      }
+    }
+  };
+
+  window.showSection=function(section){if(!currentUser)return;stopLiveCameraScanner();document.getElementById('profileMenu')?.classList.remove('show');if(currentUser.role==='owner'){if(section==='dashboard')renderDashboard();if(section==='inventory')renderInventory();if(section==='addItem')renderAddItem();if(section==='restock')renderRestock();if(section==='sales')openSalesSafe();if(section==='cash')renderCash();if(section==='employees')renderEmployees();if(section==='suppliers')renderSuppliers();if(section==='audit')renderAudits();if(section==='reports')renderReports()}else{if(section==='dashboard')renderDashboard();if(section==='pos')renderPOS();if(section==='stock')renderEmployeeStock();if(section==='transactions')renderEmployeeTransactions()}};
   window.setInterval(function(){if(currentUser&&currentUser.role==='employee'){const e=employees.find(x=>String(x.employeeId)===String(currentUser.id));if(!e||e.status!=='Active'){sessionStorage.removeItem('motorShopUser');currentUser=null;document.getElementById('app').classList.remove('show');document.getElementById('loginScreen').style.display='flex';alert('Your employee account is inactive. Please contact the Owner.')}}},3000);
 })();
 </script>
+
+<script>
+/* =====================================================
+   REPORTS + INVENTORY DASHBOARD UPDATE
+   Built on the working Sales flow; checkout is unchanged.
+===================================================== */
+(function(){
+  const moneySafe = v => typeof money === 'function'
+    ? money(Number(v)||0)
+    : '₱'+(Number(v)||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  const escSafe = v => String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  function dateOnly(v){
+    const d=new Date(v);
+    return Number.isNaN(d.getTime()) ? '' :
+      `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function txList(){
+    let list=Array.isArray(transactions)?transactions:[];
+    if(currentUser?.role==='employee'){
+      list=list.filter(t=>String(t.employeeId)===String(currentUser.id));
+    }
+    return list;
+  }
+
+  window.renderReports=function(){
+    const all=txList();
+    const today=dateOnly(new Date());
+    const month=today.slice(0,7);
+    const todayTx=all.filter(t=>dateOnly(t.date)===today);
+    const monthTx=all.filter(t=>dateOnly(t.date).startsWith(month));
+
+    const totalSales=all.reduce((s,t)=>s+Number(t.total||0),0);
+    const totalProfit=all.reduce((s,t)=>s+Number(t.profit||0),0);
+    const itemsSold=all.reduce((s,t)=>s+(Array.isArray(t.items)?t.items.reduce((a,i)=>a+Number(i.qty||0),0):0),0);
+
+    const productMap={};
+    all.forEach(t=>(t.items||[]).forEach(i=>{
+      const k=String(i.productId??i.sku??i.name);
+      if(!productMap[k]) productMap[k]={name:i.name||'Unknown',sku:i.sku||'',qty:0,sales:0};
+      productMap[k].qty+=Number(i.qty||0);
+      productMap[k].sales+=Number(i.price||0)*Number(i.qty||0);
+    }));
+    const topProducts=Object.values(productMap).sort((a,b)=>b.qty-a.qty).slice(0,10);
+
+    const employeeMap={};
+    all.forEach(t=>{
+      const k=t.employeeId||t.employee||'Unknown';
+      if(!employeeMap[k]) employeeMap[k]={name:t.employee||'Unknown',sales:0,profit:0,count:0};
+      employeeMap[k].sales+=Number(t.total||0);
+      employeeMap[k].profit+=Number(t.profit||0);
+      employeeMap[k].count++;
+    });
+
+    document.getElementById('mainContent').innerHTML=`
+      <div class="section-title">📊 Reports</div>
+      <div class="card">
+        <div class="muted">Sales overview</div>
+        <div class="two-col" style="margin-top:10px">
+          <div class="info-box"><small>Total Sales</small><strong>${moneySafe(totalSales)}</strong></div>
+          <div class="info-box"><small>Total Profit</small><strong>${moneySafe(totalProfit)}</strong></div>
+          <div class="info-box"><small>Transactions</small><strong>${all.length}</strong></div>
+          <div class="info-box"><small>Items Sold</small><strong>${itemsSold}</strong></div>
+          <div class="info-box"><small>Today's Sales</small><strong>${moneySafe(todayTx.reduce((s,t)=>s+Number(t.total||0),0))}</strong></div>
+          <div class="info-box"><small>This Month</small><strong>${moneySafe(monthTx.reduce((s,t)=>s+Number(t.total||0),0))}</strong></div>
+        </div>
+      </div>
+
+      <div class="section-title">🏆 Top Products</div>
+      <div class="card table-wrap"><table>
+        <thead><tr><th>Product</th><th>SKU</th><th>Qty Sold</th><th>Sales</th></tr></thead>
+        <tbody>${topProducts.length ? topProducts.map(p=>`
+          <tr><td>${escSafe(p.name)}</td><td>${escSafe(p.sku)}</td><td>${p.qty}</td><td>${moneySafe(p.sales)}</td></tr>
+        `).join('') : '<tr><td colspan="4">No sales data yet.</td></tr>'}</tbody>
+      </table></div>
+
+      <div class="section-title">👥 Sales by Employee</div>
+      <div class="card table-wrap"><table>
+        <thead><tr><th>Employee</th><th>Transactions</th><th>Sales</th><th>Profit</th></tr></thead>
+        <tbody>${Object.values(employeeMap).length ? Object.values(employeeMap).map(e=>`
+          <tr><td>${escSafe(e.name)}</td><td>${e.count}</td><td>${moneySafe(e.sales)}</td><td>${moneySafe(e.profit)}</td></tr>
+        `).join('') : '<tr><td colspan="4">No sales data yet.</td></tr>'}</tbody>
+      </table></div>
+
+      <div class="section-title">🧾 Recent Sales</div>
+      <div class="card table-wrap"><table>
+        <thead><tr><th>Date</th><th>Employee</th><th>Items</th><th>Total</th><th>Profit</th></tr></thead>
+        <tbody>${all.slice(0,30).map(t=>`
+          <tr>
+            <td>${escSafe(new Date(t.date).toLocaleString())}</td>
+            <td>${escSafe(t.employee||'')}</td>
+            <td>${(t.items||[]).reduce((s,i)=>s+Number(i.qty||0),0)}</td>
+            <td>${moneySafe(t.total)}</td>
+            <td>${moneySafe(t.profit)}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="5">No sales recorded.</td></tr>'}</tbody>
+      </table></div>
+    `;
+    setBottomNav([
+      {icon:"🏠",name:"Dashboard",action:"showSection('dashboard')"},
+      {icon:"💰",name:"Sales",action:"showSection('sales')"},
+      {icon:"📊",name:"Reports",action:"showSection('reports')"},
+      {icon:"📦",name:"Inventory",action:"showSection('inventory')"}
+    ]);
+  };
+
+  window.renderInventory=function(){
+    const list=Array.isArray(products)?products:[];
+    const low=list.filter(p=>Number(p.stock)<=Number(p.min));
+    const out=list.filter(p=>Number(p.stock)<=0);
+    const units=list.reduce((s,p)=>s+Number(p.stock||0),0);
+    const costValue=list.reduce((s,p)=>s+Number(p.stock||0)*Number(p.cost||0),0);
+
+    document.getElementById('mainContent').innerHTML=`
+      <div class="section-title">📦 Inventory</div>
+      <div class="card">
+        <input id="inventorySearchNew" style="width:100%;padding:11px;border:1px solid #ddd;border-radius:10px"
+          placeholder="Search product / SKU" oninput="window.filterInventoryNew()">
+        <div class="two-col" style="margin-top:10px">
+          <div class="info-box"><small>Products</small><strong>${list.length}</strong></div>
+          <div class="info-box"><small>Units in Stock</small><strong>${units}</strong></div>
+          <div class="info-box"><small>Low Stock</small><strong>${low.length}</strong></div>
+          <div class="info-box"><small>Out of Stock</small><strong>${out.length}</strong></div>
+          <div class="info-box"><small>Inventory Cost Value</small><strong>${moneySafe(costValue)}</strong></div>
+        </div>
+      </div>
+      <div id="inventoryEnhancedTable"></div>
+    `;
+    window.filterInventoryNew();
+    setBottomNav([
+      {icon:"🏠",name:"Dashboard",action:"showSection('dashboard')"},
+      {icon:"📦",name:"Inventory",action:"showSection('inventory')"},
+      {icon:"➕",name:"Add Item",action:"showSection('addItem')"},
+      {icon:"📥",name:"Restock",action:"showSection('restock')"}
+    ]);
+  };
+
+  window.filterInventoryNew=function(){
+    const q=(document.getElementById('inventorySearchNew')?.value||'').toLowerCase();
+    const list=(Array.isArray(products)?products:[]).filter(p=>
+      String(p.name||'').toLowerCase().includes(q) ||
+      String(p.sku||'').toLowerCase().includes(q) ||
+      String(p.category||'').toLowerCase().includes(q) ||
+      String(p.supplier||'').toLowerCase().includes(q)
+    );
+    const el=document.getElementById('inventoryEnhancedTable');
+    if(!el)return;
+    el.innerHTML=`<div class="card table-wrap"><table>
+      <thead><tr><th>Product</th><th>SKU</th><th>Cost</th><th>Price</th><th>Stock</th><th>Min</th><th>Status</th></tr></thead>
+      <tbody>${list.map(p=>{
+        const stock=Number(p.stock||0), min=Number(p.min||0);
+        const st=stock<=0?'OUT OF STOCK':stock<=min?'LOW STOCK':'AVAILABLE';
+        return `<tr><td>${escSafe(p.name)}</td><td>${escSafe(p.sku)}</td><td>${moneySafe(p.cost)}</td><td>${moneySafe(p.price)}</td><td>${stock}</td><td>${min}</td><td><span class="status">${st}</span></td></tr>`;
+      }).join('') || '<tr><td colspan="7">No matching products.</td></tr>'}</tbody>
+    </table></div>`;
+  };
+
+  // Route Reports through the existing navigation without touching checkout.
+  const oldShowSection=window.showSection;
+  window.showSection=function(section){
+    if(section==='reports'){
+      if(!currentUser)return;
+      try{stopLiveCameraScanner();}catch(e){}
+      try{document.getElementById('profileMenu')?.classList.remove('show');}catch(e){}
+      return window.renderReports();
+    }
+    return oldShowSection(section);
+  };
+})();
+</script>
+
+
+<script>
+/* =====================================================
+   FINAL SALES SAVE FIX
+   The Supabase transactions table does not have an "items"
+   column. Save only the confirmed transaction columns.
+===================================================== */
+(function(){
+  window.completeSale=async function(){
+    if(!card.length){alert('Cart is empty.');return}
+
+    const subtotal=card.reduce((s,i)=>s+Number(i.price||0)*Number(i.qty||0),0);
+    let discount=Math.max(0,Number(document.getElementById('saleDiscount')?.value||0));
+    discount=Math.min(discount,subtotal);
+    const total=subtotal-discount;
+    const pay=Number(document.getElementById('paymentReceived')?.value||0);
+
+    if(pay<total){
+      alert('Payment is not enough. Total: '+money(total));
+      return;
+    }
+
+    const saleCart=card.map(i=>({...i}));
+    for(const item of saleCart){
+      const p=products.find(x=>String(x.id)===String(item.productId));
+      if(!p || Number(p.stock)<Number(item.qty)){
+        alert('Insufficient stock for '+item.name);
+        return;
+      }
+    }
+
+    const profit=saleCart.reduce((s,i)=>
+      s+(Number(i.price||0)-Number(i.cost||0))*Number(i.qty||0),0)-discount;
+
+    const tx={
+      id:'TX-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),
+      date:new Date().toISOString(),
+      branch:currentUser?.branch||'Main Branch',
+      employee:currentUser?.name||'',
+      employeeId:String(currentUser?.id||currentUser?.employeeId||''),
+      items:saleCart,
+      total,subtotal,discount,profit,
+      customerName:document.getElementById('customerName')?.value||'',
+      customerContact:document.getElementById('customerContact')?.value||'',
+      payment:pay,
+      change:pay-total
+    };
+
+    /*
+      IMPORTANT:
+      Do not send tx.items to the transactions table because the
+      actual table schema does not contain an items column.
+    */
+    if(navigator.onLine && databaseReady && typeof _supabase!=='undefined'){
+      try{
+        const {error}=await _supabase.from('transactions').insert({
+          id:tx.id,
+          date:tx.date,
+          branch:tx.branch,
+          employee:tx.employee,
+          employee_id:tx.employeeId,
+          total:tx.total,
+          profit:tx.profit
+        });
+        if(error) throw error;
+
+        // Server save succeeded. Now update local stock.
+        saleCart.forEach(i=>{
+          const p=products.find(x=>String(x.id)===String(i.productId));
+          if(p) p.stock=Number(p.stock)-Number(i.qty);
+        });
+
+        transactions=Array.isArray(transactions)?transactions:[];
+        transactions=transactions.filter(t=>String(t.id)!==String(tx.id));
+        transactions.unshift(tx);
+        saveLocalData();
+
+        card=[];
+        renderCart();
+        if(typeof renderDashboard==='function') renderDashboard();
+        if(typeof updateDbStatus==='function') updateDbStatus();
+
+        alert('SALE COMPLETED\nTransaction: '+tx.id+'\nTotal: '+money(total)+'\nChange: '+money(tx.change)+'\nStatus: Saved to Supabase');
+        if(typeof showReceipt==='function') showReceipt(tx);
+        return;
+      }catch(err){
+        console.error('Supabase transaction save failed:',err);
+        alert('Hindi na-save sa Supabase ang sale.\n\n'+(err.message||err)+'\n\nWalang local sale na tatanggalin at hindi muna iko-complete ang transaction.');
+        return;
+      }
+    }
+
+    // Offline: keep the full sale locally and queue only schema-safe fields.
+    transactions=Array.isArray(transactions)?transactions:[];
+    transactions=transactions.filter(t=>String(t.id)!==String(tx.id));
+    transactions.unshift(tx);
+    saleCart.forEach(i=>{
+      const p=products.find(x=>String(x.id)===String(i.productId));
+      if(p) p.stock=Number(p.stock)-Number(i.qty);
+    });
+    saveLocalData();
+
+    if(typeof enqueueOffline==='function'){
+      enqueueOffline('process_sale',{
+        id:tx.id,date:tx.date,branch:tx.branch,employee:tx.employee,
+        employee_id:tx.employeeId,total:tx.total,profit:tx.profit
+      });
+    }
+
+    card=[];
+    renderCart();
+    if(typeof renderDashboard==='function') renderDashboard();
+    if(typeof updateDbStatus==='function') updateDbStatus();
+    alert('SALE COMPLETED\nTransaction: '+tx.id+'\nTotal: '+money(total)+'\nChange: '+money(tx.change)+'\nStatus: Saved locally / queued for sync');
+    if(typeof showReceipt==='function') showReceipt(tx);
+  };
+
+  // Replace the offline queue handler so queued sales also match the real schema.
+  const oldProcessQueue=window.processOfflineQueue;
+  window.processOfflineQueue=async function(){
+    if(!navigator.onLine || !databaseReady || typeof _supabase==='undefined') return;
+    const queue=typeof getOfflineQueue==='function'?getOfflineQueue():[];
+    if(!queue.length) return;
+
+    const remaining=[];
+    for(const action of queue){
+      try{
+        let result=null;
+        if(action.type==='process_sale'){
+          const d=action.data||{};
+          result=await _supabase.from('transactions').upsert({
+            id:d.id,date:d.date,branch:d.branch,employee:d.employee,
+            employee_id:d.employee_id,total:d.total,profit:d.profit
+          },{onConflict:'id',ignoreDuplicates:true});
+        }else if(action.type==='insert_product'){
+          result=await _supabase.from('products').upsert(action.data,{onConflict:'id',ignoreDuplicates:true});
+        }else if(action.type==='insert_cash'){
+          result=await _supabase.from('cash_collections').upsert(action.data,{onConflict:'id',ignoreDuplicates:true});
+        }else if(action.type==='update_product_stock'){
+          result=await _supabase.from('products').update({stock:action.data.stock}).eq('id',action.data.id);
+        }else{
+          continue;
+        }
+        if(result?.error) throw result.error;
+      }catch(e){
+        action.attempts=Number(action.attempts||0)+1;
+        action.lastError=e?.message||String(e);
+        remaining.push(action);
+      }
+    }
+    if(typeof saveOfflineQueue==='function') saveOfflineQueue(remaining);
+    if(typeof updateDbStatus==='function') updateDbStatus();
+  };
+})();
+</script>
+
+
+<script>
+/* =====================================================
+   AUTO TARGET STOCK + COLLAPSIBLE DASHBOARD
+   8-week sales history • 3-week coverage • 20% safety buffer
+===================================================== */
+(function(){
+  const AUTO_TARGET_KEY='motorShop_autoTargetStock_v1';
+  const WEEK_MS=7*24*60*60*1000;
+
+  function saleItems(tx){
+    return Array.isArray(tx?.items)?tx.items:[];
+  }
+
+  function calculateAutoTarget(product){
+    const now=Date.now();
+    const since=now-(8*WEEK_MS);
+    let units=0;
+
+    (Array.isArray(transactions)?transactions:[]).forEach(tx=>{
+      const d=new Date(tx.date||0).getTime();
+      if(!d || d<since) return;
+      saleItems(tx).forEach(item=>{
+        const sameId=String(item.productId??'')===String(product.id);
+        const sameSku=product.sku && item.sku && String(item.sku)===String(product.sku);
+        if(sameId || sameSku) units+=Number(item.qty||0);
+      });
+    });
+
+    // Average weekly sales over the full 8-week window.
+    const avgWeekly=units/8;
+    // Three weeks of coverage plus 20% safety buffer.
+    const suggested=Math.ceil(avgWeekly*3*1.20);
+
+    // Do not erase a deliberately higher existing target.
+    return Math.max(Number(product.target||0), suggested, Number(product.min||0));
+  }
+
+  function refreshAutoTargets(force=false){
+    if(!Array.isArray(products) || !products.length) return;
+    const now=Date.now();
+    let state={};
+    try{state=JSON.parse(localStorage.getItem(AUTO_TARGET_KEY)||'{}')||{};}catch(e){state={};}
+
+    // Recalculate once per week unless explicitly forced.
+    const last=Number(state.lastRun||0);
+    if(!force && now-last<7*24*60*60*1000) return;
+
+    products.forEach(p=>{
+      const target=calculateAutoTarget(p);
+      if(target>Number(p.target||0)) p.target=target;
+    });
+
+    state.lastRun=now;
+    localStorage.setItem(AUTO_TARGET_KEY,JSON.stringify(state));
+    if(typeof saveLocalData==='function') saveLocalData();
+
+    // Sync changed targets to Supabase when the field exists in the existing schema.
+    if(navigator.onLine && typeof databaseReady!=='undefined' && databaseReady && typeof _supabase!=='undefined'){
+      Promise.all((products||[]).map(async p=>{
+        try{
+          return await _supabase.from('products').update({target:Number(p.target||0)}).eq('id',p.id);
+        }catch(e){ return null; }
+      })).catch(()=>{});
+    }
+  }
+
+  window.refreshAutoTargets=refreshAutoTargets;
+
+  // Recalculate after initial data synchronization.
+  window.addEventListener('load',()=>setTimeout(()=>refreshAutoTargets(false),1800));
+
+  /* Collapsible dashboard sections. Existing dashboard data is preserved;
+     this wrapper only changes presentation. */
+  function makeDashboardCollapsible(){
+    const main=document.getElementById('mainContent');
+    if(!main || main.dataset.collapsibleApplied==='1') return;
+    const titles=[...main.querySelectorAll('.section-title')];
+    if(titles.length<2) return;
+
+    titles.forEach((title,index)=>{
+      const body=[];
+      let n=title.nextElementSibling;
+      while(n && !n.classList.contains('section-title')){
+        body.push(n);
+        n=n.nextElementSibling;
+      }
+      const wrap=document.createElement('div');
+      wrap.className='dashboard-collapsible';
+      wrap.style.marginBottom='10px';
+      const head=document.createElement('button');
+      head.type='button';
+      head.style.cssText='width:100%;text-align:left;padding:13px 15px;border:1px solid #ddd;border-radius:10px;background:#fff;font-weight:700;font-size:15px;display:flex;justify-content:space-between;align-items:center;';
+      head.innerHTML='<span>'+title.textContent+'</span><span>＋</span>';
+
+      const content=document.createElement('div');
+      content.style.display='none';
+      content.style.marginTop='6px';
+      body.forEach(x=>content.appendChild(x));
+
+      head.onclick=()=>{
+        const open=content.style.display!=='none';
+        content.style.display=open?'none':'block';
+        head.lastElementChild.textContent=open?'＋':'−';
+      };
+
+      title.replaceWith(wrap);
+      wrap.appendChild(head);
+      wrap.appendChild(content);
+    });
+    main.dataset.collapsibleApplied='1';
+  }
+
+  const oldRenderDashboard=window.renderDashboard;
+  if(typeof oldRenderDashboard==='function'){
+    window.renderDashboard=function(){
+      oldRenderDashboard.apply(this,arguments);
+      setTimeout(makeDashboardCollapsible,0);
+    };
+  }
+  window.makeDashboardCollapsible=makeDashboardCollapsible;
+
+  // Also apply after navigation because different dashboard implementations
+  // may render asynchronously.
+  const observer=new MutationObserver(()=>{
+    const main=document.getElementById('mainContent');
+    if(main && main.querySelector('.section-title')) makeDashboardCollapsible();
+  });
+  window.addEventListener('load',()=>{
+    const main=document.getElementById('mainContent');
+    if(main) observer.observe(main,{childList:true,subtree:true});
+  });
+})();
+</script>
+
+
+<script>
+/* =========================================================
+   FINAL UPDATE PATCH v4.9
+   - explicit TEST/ACTUAL transaction marker
+   - owner-only test-data cleanup
+   - automatic target stock / suggested restock
+   - clickable restock + history
+   - draggable low-stock notification
+   - employee concise dashboard + cash due
+   - profit-based commission setting/display
+   - owner branding settings
+   - cash collection outstanding balance continuity
+   ========================================================= */
+(function(){
+  'use strict';
+
+  function esc(v){return String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function num(v){return Number(v)||0;}
+  function money9(v){
+    return typeof window.money==='function' ? window.money(num(v)) :
+      '₱'+num(v).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function getTransactions(){ return Array.isArray(window.transactions)?window.transactions:[]; }
+  function save(){ try{ if(typeof window.saveLocalData==='function') window.saveLocalData(); }catch(e){} }
+  function role(){return window.currentUser?.role||'';}
+  function owner(){return role()==='owner';}
+
+  /* ---------- TEST / ACTUAL distinction ---------- */
+  function ensureTxMode(tx){
+    if(!tx) return tx;
+    if(typeof tx.is_test!=='boolean') tx.is_test=false; // safe default = ACTUAL
+    tx.mode=tx.is_test?'TEST':'ACTUAL';
+    return tx;
+  }
+  getTransactions().forEach(ensureTxMode);
+
+  window.setTransactionTestMode=function(tx,isTest){
+    if(!tx) return;
+    tx.is_test=!!isTest; tx.mode=tx.is_test?'TEST':'ACTUAL'; save();
+  };
+
+  /* ---------- Automatic Target Stock ---------- */
+  function salesLastWeeks(productId,weeks){
+    const cutoff=Date.now()-weeks*7*86400000;
+    let qty=0;
+    getTransactions().filter(t=>!t.is_test && new Date(t.date||0).getTime()>=cutoff)
+      .forEach(t=>(t.items||[]).forEach(i=>{
+        if(String(i.productId??i.sku??i.name)===String(productId)) qty+=num(i.qty);
+      }));
+    return qty;
+  }
+  window.getAutoTargetStock=function(p){
+    if(!p) return 0;
+    const weekly=salesLastWeeks(p.id??p.sku??p.name,8)/8;
+    if(weekly<=0) return Math.max(1, num(p.stock)||1);
+    return Math.max(1,Math.ceil(weekly*3*1.20));
+  };
+  window.getSuggestedRestockQty=function(p){
+    return Math.max(0,window.getAutoTargetStock(p)-num(p.stock));
+  };
+
+  /* ---------- Owner-only test cleanup ---------- */
+  window.clearTestData=function(){
+    if(!owner()){alert('Owner access required.');return;}
+    const before=getTransactions().length;
+    window.transactions=getTransactions().filter(t=>!t.is_test);
+    let removed=before-window.transactions.length;
+    if(Array.isArray(window.pendingRestocks)){
+      const rb=window.pendingRestocks.length;
+      window.pendingRestocks=window.pendingRestocks.filter(r=>!r.is_test);
+      removed += rb-window.pendingRestocks.length;
+    }
+    save();
+    alert('Test data cleared. Removed '+removed+' test transaction/restock record(s). Actual sales and products were retained.');
+    if(typeof renderDashboard==='function') renderDashboard();
+  };
+
+  /* ---------- Restock action ---------- */
+  window.performSuggestedRestock=function(productId){
+    if(!owner()){alert('Owner access required.');return;}
+    const p=(window.products||[]).find(x=>String(x.id)===String(productId));
+    if(!p){alert('Item not found.');return;}
+    const suggested=window.getSuggestedRestockQty(p);
+    const q=prompt('Restock '+(p.name||p.sku||'item')+'\nCurrent stock: '+num(p.stock)+'\nSuggested quantity: '+suggested+'\n\nEnter quantity:',String(suggested));
+    if(q===null)return;
+    const qty=Math.floor(num(q));
+    if(qty<=0){alert('Please enter a quantity greater than 0.');return;}
+    p.stock=num(p.stock)+qty;
+    if(!Array.isArray(window.stockMovements)) window.stockMovements=[];
+    window.stockMovements.push({id:'REST-'+Date.now(),type:'RESTOCK',productId:p.id,productName:p.name,qty,date:new Date().toISOString(),by:window.currentUser?.name||window.currentUser?.id||'Owner'});
+    if(!Array.isArray(window.pendingRestocks)) window.pendingRestocks=[];
+    window.pendingRestocks=window.pendingRestocks.filter(r=>String(r.productId)!==String(p.id));
+    save();
+    alert('Restock saved: '+qty+' unit(s) added to '+(p.name||'item')+'.');
+    if(typeof renderRestock==='function') renderRestock();
+    if(typeof renderInventory==='function') renderInventory();
+  };
+
+  /* ---------- Cash collection continuity ---------- */
+  window.getEmployeeCashState=function(employeeId){
+    const tx=getTransactions().filter(t=>!t.is_test && String(t.employeeId)===String(employeeId));
+    let collected=0;
+    (window.cashCollections||[]).filter(c=>String(c.employeeId)===String(employeeId)).forEach(c=>collected+=num(c.amount));
+    const gross=tx.reduce((s,t)=>s+num(t.total),0);
+    const outstanding=Math.max(0,gross-collected);
+    return {sales:tx,gross, collected, outstanding, pendingSales:tx.filter(t=>!t.cashCollected).length};
+  };
+
+  /* ---------- Profit-based commission ---------- */
+  window.getEmployeeCommission=function(employeeId){
+    const e=(window.employees||[]).find(x=>String(x.employeeId)===String(employeeId));
+    const rate=num(e?.commissionRate ?? window.systemSettings?.commissionRate ?? 0);
+    const profit=getTransactions().filter(t=>!t.is_test && String(t.employeeId)===String(employeeId))
+      .reduce((s,t)=>s+num(t.profit),0);
+    return {rate,profit,commission:profit*rate/100};
+  };
+
+  /* ---------- Owner branding ---------- */
+  window.systemSettings=window.systemSettings||{};
+  window.saveBrandingSettings=function(){
+    if(!owner()){alert('Owner access required.');return;}
+    const name=document.getElementById('brandShopName')?.value?.trim();
+    const logo=document.getElementById('brandLogoUrl')?.value?.trim();
+    const title=document.getElementById('brandLoginTitle')?.value?.trim();
+    if(name!==undefined) window.systemSettings.shopName=name||'Motor Shop';
+    if(logo!==undefined) window.systemSettings.logoUrl=logo;
+    if(title!==undefined) window.systemSettings.loginTitle=title||window.systemSettings.shopName||'Motor Shop';
+    save(); applyBranding(); alert('Branding saved.');
+  };
+  window.applyBranding=function(){
+    const s=window.systemSettings||{};
+    if(s.shopName) document.querySelectorAll('[data-shop-name]').forEach(x=>x.textContent=s.shopName);
+    if(s.loginTitle){const x=document.querySelector('[data-login-title]');if(x)x.textContent=s.loginTitle;}
+    if(s.logoUrl) document.querySelectorAll('[data-shop-logo]').forEach(x=>{x.src=s.logoUrl;x.style.display='block';});
+    if(s.loginTitle) document.title=s.loginTitle;
+  };
+
+  /* ---------- Draggable low-stock panel ---------- */
+  window.makeStockNotificationDraggable=function(){
+    const box=document.getElementById('stockNotification');
+    if(!box||box.dataset.dragReady)return;
+    box.dataset.dragReady='1';
+    box.style.position='fixed'; box.style.zIndex='99999'; box.style.cursor='default';
+    let drag=false,ox=0,oy=0;
+    box.addEventListener('pointerdown',e=>{
+      if(e.target.closest('button,a,input,select,textarea'))return;
+      drag=true; ox=e.clientX-box.offsetLeft; oy=e.clientY-box.offsetTop;
+      try{box.setPointerCapture(e.pointerId)}catch(_){}
+    });
+    box.addEventListener('pointermove',e=>{
+      if(!drag)return;
+      box.style.left=Math.max(0,e.clientX-ox)+'px';
+      box.style.top=Math.max(0,e.clientY-oy)+'px';
+      box.style.right='auto'; box.style.bottom='auto';
+    });
+    box.addEventListener('pointerup',()=>drag=false);
+  };
+
+  /* ---------- Concise employee dashboard ---------- */
+  window.renderEmployeeSimpleSummary=function(container){
+    if(!container||!window.currentUser)return;
+    const id=window.currentUser.id;
+    const state=window.getEmployeeCashState(id);
+    const comm=window.getEmployeeCommission(id);
+    container.innerHTML =
+      '<div class="card"><div class="section-title">📊 Today</div>'+
+      '<div class="row"><span>Sales</span><strong>'+money9(state.sales.filter(t=>new Date(t.date).toDateString()===new Date().toDateString()).reduce((s,t)=>s+num(t.total),0))+'</strong></div>'+
+      '<div class="row"><span>Cash Due</span><strong>'+money9(state.outstanding)+'</strong></div>'+
+      '<div class="row"><span>Commission</span><strong>'+money9(comm.commission)+'</strong></div>'+
+      '<button class="btn btn-dark" style="margin-top:10px" onclick="window.showEmployeeTransactionDetails()">VIEW DETAILS</button></div>';
+  };
+  window.showEmployeeTransactionDetails=function(){
+    const id=window.currentUser?.id, state=window.getEmployeeCashState(id);
+    const rows=state.sales.map(t=>'<div class="row"><span>'+esc(t.id)+'</span><strong>'+money9(t.total)+'</strong></div>').join('');
+    if(typeof window.showModal==='function') window.showModal('Transaction Details',
+      '<div class="card"><div class="row"><span>Cash Due</span><strong>'+money9(state.outstanding)+'</strong></div>'+
+      '<hr>'+rows+'</div>');
+    else alert('Cash Due: '+money9(state.outstanding));
+  };
+
+  /* ---------- Owner customization panel ---------- */
+  window.renderBrandingSettings=function(container){
+    if(!owner()||!container)return;
+    const s=window.systemSettings||{};
+    container.innerHTML='<div class="card"><h3>🎨 System Branding</h3>'+
+      '<label>Shop Name</label><input id="brandShopName" class="input" value="'+esc(s.shopName||'Motor Shop')+'">'+
+      '<label style="display:block;margin-top:10px">Logo URL</label><input id="brandLogoUrl" class="input" value="'+esc(s.logoUrl||'')+'">'+
+      '<label style="display:block;margin-top:10px">Login Page Title</label><input id="brandLoginTitle" class="input" value="'+esc(s.loginTitle||'Motor Shop')+'">'+
+      '<button class="btn btn-dark" style="margin-top:12px" onclick="saveBrandingSettings()">SAVE BRANDING</button></div>';
+  };
+
+  /* ---------- Owner cleanup button ---------- */
+  window.renderTestCleanupControl=function(container){
+    if(!owner()||!container)return;
+    container.insertAdjacentHTML('beforeend','<div class="card" style="margin-top:10px"><h3>🧹 Test Data</h3><p class="muted">Removes TEST transactions/restock records only. Actual sales and products are retained.</p><button class="btn btn-dark" onclick="clearTestData()">CLEAR TEST DATA</button></div>');
+  };
+
+  /* ---------- Commission setting helper ---------- */
+  window.setEmployeeCommissionRate=function(employeeId,rate){
+    if(!owner()){alert('Owner access required.');return;}
+    const e=(window.employees||[]).find(x=>String(x.employeeId)===String(employeeId));
+    if(!e){alert('Employee not found.');return;}
+    e.commissionRate=Math.max(0,num(rate)); save();
+  };
+
+  window.addEventListener('load',function(){
+    try{applyBranding();}catch(e){}
+    setTimeout(makeStockNotificationDraggable,500);
+    setTimeout(function(){
+      const box=document.getElementById('stockNotification');
+      if(box) makeStockNotificationDraggable();
+    },1500);
+  });
+
+  window.addEventListener('click',function(){
+    setTimeout(function(){try{makeStockNotificationDraggable();}catch(e){}},50);
+  });
+})();
+</script>
+
+
+<script id="v49-final-fix-js">
+(function(){
+  function cleanEnd(){
+    const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),a=[];
+    while(w.nextNode())a.push(w.currentNode);
+    a.forEach(n=>{if(/\/end/i.test(n.nodeValue))n.nodeValue=n.nodeValue.replace(/\/end/gi,'')});
+  }
+  function makeDraggable(el){
+    if(!el || el.dataset.msDragReady)return;
+    el.dataset.msDragReady="1";
+    const handle=el.querySelector('.modal-header,.popup-header,.notification-header,.header')||el;
+    let drag=false,dx=0,dy=0;
+    handle.style.cursor='move';
+    handle.addEventListener('pointerdown',e=>{
+      drag=true; const r=el.getBoundingClientRect();
+      dx=e.clientX-r.left; dy=e.clientY-r.top;
+      try{handle.setPointerCapture(e.pointerId)}catch(_){}
+    });
+    handle.addEventListener('pointermove',e=>{
+      if(!drag)return;
+      el.style.left=Math.max(0,e.clientX-dx)+'px';
+      el.style.top=Math.max(0,e.clientY-dy)+'px';
+      el.style.right='auto'; el.style.bottom='auto';
+      el.style.position='fixed';
+    });
+    handle.addEventListener('pointerup',()=>drag=false);
+  }
+  window.addEventListener('load',()=>{
+    cleanEnd();
+    document.querySelectorAll('.modal,.popup,.notification').forEach(makeDraggable);
+    setTimeout(cleanEnd,800);
+  });
+  new MutationObserver(()=>cleanEnd()).observe(document.documentElement,{subtree:true,childList:true,characterData:true});
+})();
+</script>
+
 </body>
 </html>
